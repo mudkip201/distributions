@@ -28,7 +28,7 @@ class Distribution:
     def skewness(self):
         raise NotImplementedError("Should have implemented skewness function.")
 
-def qexp(x,q) #q-exponential
+def qexp(x,q): #q-exponential
     if(q!=0):
         return math.pow(1+(1-q)*x,1/(1-q))
     return math.exp(x)
@@ -77,7 +77,7 @@ class amoroso(Distribution):
 
 class anglit(Distribution):
     def pdf(self,x):
-        return math.cos(2x)
+        return math.cos(2*x)
     def cdf(self,x):
         return math.sin(x+math.pi/4)**2
     def random(self):
@@ -167,11 +167,11 @@ class asymlaplace(Distribution): #asymmetric laplace
     def variance(self,m,lmbda,kppa):
         if(kppa<=0 or lmbda<=0):
             raise InvalidInputError("kppa and lambda must be greater than 0")
-        return (1+math.pow(kppa,4))/(lambda**2*kppa**2)
+        return (1+math.pow(kppa,4))/(lmbda**2*kppa**2)
     def stddev(self,m,lmbda,kppa):
         if(kppa<=0 or lmbda<=0):
             raise InvalidInputError("kppa and lambda must be greater than 0")
-        return math.sqrt((1+math.pow(kppa,4))/(lambda**2*kppa**2))
+        return math.sqrt((1+math.pow(kppa,4))/(lmbda**2*kppa**2))
     def skewness(self,m,lmbda,kppa):
         if(kppa<=0 or lmbda<=0):
             raise InvalidInputError("kppa and lambda must be greater than 0")
@@ -193,7 +193,7 @@ class baldingnichols(Distribution):
     def mode(self,f,p):
         if(F<=0 or F>=1 or p<=0 or p>=1):
             raise InvalidInputError("all inputs must be between 0 and 1 exclusive")
-    return (F-(1-F)*p)/(3*F-1)
+        return (F-(1-F)*p)/(3*F-1)
     def variance(self,f,p):
         if(F<=0 or F>=1 or p<=0 or p>=1):
             raise InvalidInputError("all inputs must be between 0 and 1 exclusive")
@@ -221,7 +221,7 @@ class bartlett(Distribution):
     def random(self,a,q):
         return rpoisson(a)*rgeometric(q)
 
-class bates(Distribution)
+class bates(Distribution):
     def random(self):
         if(n%1!=0 or n<1):
             raise InvalidInputError("n must be a positive integer greater than 0")
@@ -871,7 +871,7 @@ class expdiscweibull(Distribution): #exponentiated discrete weibull
     def random(self,p,a,g):
         return math.pow(math.pow(math.log(1-rg0()),(1/g))/math.log(p),1/a)-1
     def pdf(self,p,a,g,x):
-    return  math.pow(1-math.pow(p,math.pow(x+1,a)),g) - math.pow(1-math.pow(p,math.pow(x,a)))
+        return math.pow(1-math.pow(p,math.pow(x+1,a)),g) - math.pow(1-math.pow(p,math.pow(x,a)))
     def cdf(self,p,a,g,x):
         return math.pow(1-math.pow(p,math.pow(x+1,a)),g)
 
@@ -881,14 +881,13 @@ class expgenextremevalue(Distribution): #exponential generalized extreme value
             return -math.log(-math.log(rg0())/b)
         return (1-math.pow(-math.log(rg0())/b,k))/k
     def pdf(self,b,k,x):
-        if(k=0):
+        if(k==0):
             return b*math.exp(-b*math.exp(-x))*math.exp(-x)
         return b*math.pow(1-k*x,1/k-1)*math.exp(-b*math.sqrt(1-k*x))
     def cdf(self,b,k,x):
-        if(k=0):
+        if(k==0):
             return math.exp(-b*math.exp(-x))
         return math.exp(-b*math.pow(1-k*x,1/k))
-    def kurtosis(self,b,k):
     def mean(self,b,k):
         if(k!=0):
             return 1/k*(1-math.pow(b,-k)*math.gamma(k+1))
@@ -929,7 +928,7 @@ class expgenlinearexp(Distribution): #exponentiated generalized linear exponenti
     def random(self,a,b,c,d):
         u=rg0()
         if(b!=0):
-            return -a/b+1/b*math.sqrt(a**2+2b*math.pow(-math.log(1-math.pow(u,1/d)),1/c))
+            return -a/b+1/b*math.sqrt(a**2+2*b*math.pow(-math.log(1-math.pow(u,1/d)),1/c))
         return 1/a*math.pow(-math.log(1-math.pow(u,1/d)),1/c)
     def pdf(self,a,b,c,d,x):
         return c*d*(a+b*x)*math.pow(a*x+b/2*x**2,c-1)*math.pow(1-math.exp(-math.pow(a*x+b/2*x**2,c)),d-1)*math.exp(-math.pow(a*x+b/2*x**2,c))
@@ -970,7 +969,7 @@ class expkumaraswamydagum(Distribution): #exponentiated kumaraswamy-dagum
     def pdf(self,a,d,l,p,t,x):
         return math.pow(1-math.pow(1-math.pow(1+l*math.pow(x,-d),-a),p),t)
     def cdf(self,a,d,l,p,t,x):
-        return a*l*d*p*t*math.pow(x,-d-1)*math.pow(1+l*math.pow(x,-d),-a-1)*math.pow(1-math.pow(1+l*math.pow(x,-d),-a)p-1)*math.pow(1-math.pow(1-math.pow(1+l*math.pow(x,-d),-a),p),t-1)
+        return a*l*d*p*t*math.pow(x,-d-1)*math.pow(1+l*math.pow(x,-d),-a-1)*math.pow(1-math.pow(1+l*math.pow(x,-d),-a),p-1)*math.pow(1-math.pow(1-math.pow(1+l*math.pow(x,-d),-a),p),t-1)
 
 class explog(Distribution): #exponentiated logistic
     def pdf(self,p,bb,x):
@@ -1024,7 +1023,7 @@ class expmodnorm(Distribution): #exponentially modified normal
     def cdf(self,mu,lmbda,sigma2,x):
         u=lmbda*(x-mu)
         v=lmbda*math.sqrt(sigma2)
-        return st.norm.cdf(u,0,v)-math.exp(-u+v**2/2+math.log(st.norm.cdf(u,v**2,v))))
+        return st.norm.cdf(u,0,v)-math.exp(-u+v**2/2+math.log(st.norm.cdf(u,v**2,v)))
     def kurtosis(self,mu,lmbda,sigma2):
         return 3*(1+2/(sigma2*lmbda**2)+3/(lmbda**4*sigma2**2))/math.pow(1+1/(lmbda**2*sigma2),2)-3
     def mean(self,mu,lmbda,sigma2):
@@ -1215,7 +1214,7 @@ class extendedgenexp(Distribution): #extended generalized exponential
     def pdf(self,a,b,l,x):
         if(b==0):
             return a*l*math.pow(1-math.exp(-l*x),a-1)*math.exp(-l*x)
-        return a*l*math.pow(1-math.pow(1-b*l*x,1/b)a-1)*math.pow(1-b*l*x,1/b-1)
+        return a*l*math.pow(1-math.pow(1-b*l*x,1/b),a-1)*math.pow(1-b*l*x,1/b-1)
     def cdf(self,a,b,l,x):
         if(b==0):
             return math.pow(1-math.exp(-l*x),a)
@@ -1517,7 +1516,7 @@ class genexppoisson(Distribution): #generalized exponentiated poisson
 
 class genextremevalue(Distribution):
     def pdf(self,mu,sigma,xi,x):
-        if(xi=0):
+        if(xi==0):
             return extremevalue.pdf(mu,sigma,x)
         if(xi>0 and x<mu-sigma/xi):
             raise InvalidInputError("x must be bigger than or equal to mu-sigma/xi")
@@ -1528,7 +1527,7 @@ class genextremevalue(Distribution):
         t=math.pow(1+xi*(x-mu)/sigma,-1/xi)
         return 1/sigma*math.pow(t,xi+1)*math.exp(t)
     def cdf(self,mu,sigma,xi,x):
-        if(xi=0):
+        if(xi==0):
             return extremevalue.cdf(mu,sigma,x)
         if(xi>0 and x<mu-sigma/xi):
             raise InvalidInputError("x must be bigger than or equal to mu-sigma/xi")
@@ -1539,12 +1538,12 @@ class genextremevalue(Distribution):
         t=math.pow(1+xi*(x-mu)/sigma,-1/xi)
         return math.exp(-t)
     def random(self,mu,sigma,xi):
-        if(xi=0):
+        if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
             raise InvalidInputError("sigma must be positive")
     def kurtosis(self,mu,sigma,xi):
-        if(xi=0):
+        if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
             raise InvalidInputError("sigma must be positive")
@@ -1552,7 +1551,7 @@ class genextremevalue(Distribution):
             return float("infinity")
         return (math.gamma(1-4*xi)-4*math.gamma(1-xi)*math.gamma(1-3*xi)+6*math.gamma(1-2*xi)*(math.gamma(1-xi)**2)-3*(math.gamma(1-xi)**4))/math.pow(math.gamma(1-2*xi)-math.gamma(1-xi)**2,2)-3
     def mean(self,mu,sigma,xi):
-        if(xi=0):
+        if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
             raise InvalidInputError("sigma must be positive")
@@ -1560,19 +1559,19 @@ class genextremevalue(Distribution):
             return float("infinity")
         return mu+sigma*(math.gamma(1-xi)-1)/xi
     def median(self,mu,sigma,xi):
-        if(xi=0):
+        if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
             raise InvalidInputError("sigma must be positive")
         return mu+sigma*(math.pow(math.log(2),-xi)-1)/xi
     def mode(self,mu,sigma,xi):
-        if(xi=0):
+        if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
             raise InvalidInputError("sigma must be positive")
         return mu+sigma*(math.pow(1+xi,-xi)-1)/xi
     def variance(self,mu,sigma,xi):
-        if(xi=0):
+        if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
             raise InvalidInputError("sigma must be positive")
@@ -1580,7 +1579,7 @@ class genextremevalue(Distribution):
             return float("infinity")
         return sigma**2*(math.gamma(1-2*xi)-math.gamma(1-xi)**2)/xi**2
     def stddev(self,mu,sigma,xi):
-        if(xi=0):
+        if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
             raise InvalidInputError("sigma must be positive")
@@ -1588,13 +1587,13 @@ class genextremevalue(Distribution):
             return float("infinity")
         return sigma/xi*math.sqrt(math.gamma(1-2*xi)-math.gamma(1-xi)**2)
     def entropy(self,mu,sigma,xi):
-        if(xi=0):
+        if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
             raise InvalidInputError("sigma must be positive")
         return math.log(sigma)+np.euler_gamma*(xi+1)+1
     def skewness(self,mu,sigma,xi):
-        if(xi=0):
+        if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
             raise InvalidInputError("sigma must be positive")
@@ -1946,7 +1945,7 @@ class halfnormal(Distribution):
             raise InvalidInputError("sigma2 must be positive")
         if(x<0):
             raise InvalidInputError("x must be non-negative")
-        reurn math.erf(math.sqrt(x**2/(2*sigma2)))
+        return math.erf(math.sqrt(x**2/(2*sigma2)))
     def random(self,sigma2):
         if(sigma2<=0):
             raise InvalidInputError("sigma2 must be positive")
@@ -2123,7 +2122,7 @@ class invparalogistic(Distribution): #inverse paralogistic
 
 class invweibull(Distribution): #inverse weibull
     def random(self,c):
-    return st.invweibull.rvs(c)
+        return st.invweibull.rvs(c)
 
 class irwinhall(Distribution):
     def random(self,n):
@@ -2230,7 +2229,7 @@ class kappa(Distribution):
         n=rg0()
         return xi+(aa/k)*(1-math.pow(1-math.pow(n,h),k))
 
-class kmkm(distribution): #kumaraswamy-kumaraswamy
+class kmkm(Distribution): #kumaraswamy-kumaraswamy
     def random(self,a,b,c,d):
         return math.pow(1-math.pow(1-math.pow(1-math.pow(1-rg0(),1/b),1/a),1/d),1/c)
 
@@ -2384,7 +2383,7 @@ class kumaraswamyhalfcauchy(Distribution):
 
 class kumaraswamylinearexp(Distribution): #kumaraswamy linear exponential
     def random(self,a,b,l,t):
-        return (-l+math.sqrt(l**2-(2*t/a)math.log(1-(1-math.pow(1-rg0(),1/b)))))/t
+        return (-l+math.sqrt(l**2-(2*t/a)*math.log(1-(1-math.pow(1-rg0(),1/b)))))/t
 
 class kumaraswamyloglogistic(Distribution):
     def random(self,a,b,aa,g):
@@ -2411,7 +2410,7 @@ class laha(Distribution):
         n=r.random()
         if(n<0.5):
             return -halflaha.random(a,s)
-    return halflaha.random(a,s)
+        return halflaha.random(a,s)
 
 class laplace(Distribution):
     def pdf(self,mu,b,x):
@@ -2674,7 +2673,7 @@ class logisticuniform(Distribution):
     def median(self,l,t):
         return t*(1-math.exp(1-math.pow(2,-1/l)))
 
-class logisticweibull(Distribution)):
+class logisticweibull(Distribution):
     def random(self,a,b,l):
         return math.pow((math.pow(1/rg0(),-1/l)-1)/b,1/a)
     def pdf(self,a,b,l,x):
@@ -2718,7 +2717,7 @@ class loglogistic(Distribution):
             b=math.pi/bb
             return aa**2*(2*b/math.sin(2*b)-b**2/(math.sin(b)**2))
     def stddev(self,aa,bb):
-    return aa*math.sqrt(2*b/math.sin(2*b)-b**2/(math.sin(b)**2))
+        return aa*math.sqrt(2*b/math.sin(2*b)-b**2/(math.sin(b)**2))
 
 class lognormal(Distribution):
     def random(self,mu,sigma):
@@ -2907,7 +2906,7 @@ class minimax(Distribution):
         return math.pow(1-math.pow(1/2,1/aa),1/bb)
 
 class modifextgenexp(Distribution): #modified extended generalized exponential
-    def random(self,a,b,e,l)
+    def random(self,a,b,e,l):
         p=rg0()
         return -1/l*math.log(1/e*(b-math.pow(p*math.pow(b,a/e)-(p-1)*math.pow(b-e,a/e)),e/a))
     def pdf(self,a,b,e,l,x):
@@ -2925,7 +2924,7 @@ class moffat(Distribution):
         return genbetaprime.random(0,s,1,g,2)
 
 class moyal(Distribution):
-    def random():
+    def random(self):
         x1=rg0()
         x2=rg0()
         y=math.pi*x1-math.pi/2
@@ -3136,7 +3135,7 @@ class norminvgamma(Distribution): #normal-inverse gamma
         n=invgamma.random(aa,bb)
         return normal.random(mu,math.sqrt(n/lmbda))
 
-class oddgenexpgompertz(a,b,c,l): #odd generalized exponential-gompertz
+class oddgenexpgompertz(Distribution): #odd generalized exponential-gompertz
     def random(self,a,b,c,l):
         return 1/c*math.log(1+c/l*math.log(1-1/a*math.log(1-math.pow(rg0(),1/b))))
     def pdf(self,a,b,c,l,x):
@@ -3256,7 +3255,7 @@ class pearson3(Distribution):
         return st.pearson3.rvs(skew)
 
 
-class pearson7(Distribution)):
+class pearson7(Distribution):
     def random(self,s,m):
         return normal.random(0,s)/math.sqrt(gamma.random(1/2,m-1/2))
 
@@ -3429,7 +3428,7 @@ class raisedcosine(Distribution):
     def kurtosis(self,mu,s):
         if(s<=0):
             raise InvalidInputError("s must be positive")
-        return 6/5*(90=math.pi**4)/((math.pi**2-6)**2)
+        return 6/5*(90-math.pi**4)/((math.pi**2-6)**2)
     def mean(self,mu,s):
         if(s<=0):
             raise InvalidInputError("s must be positive")
@@ -3597,10 +3596,10 @@ class shiftedgompertz(Distribution):
     def cdf(self,b,eta,x):
         return (1-math.exp(-b*x))*math.exp(-eta*math.exp(-b*x))
     def mode(self,b,eta):
-    if(0<eta and eta<=0.5):
-        return 0
-    z=(3+eta-math.sqrt(eta**2+2*eta+5))/(2*eta)
-    return (-1/b)*math.log(z)
+        if(0<eta and eta<=0.5):
+            return 0
+        z=(3+eta-math.sqrt(eta**2+2*eta+5))/(2*eta)
+        return (-1/b)*math.log(z)
 
 class shiftedloglogistic(Distribution):
     def random(self,xi,mu,sigma):
@@ -3664,7 +3663,7 @@ class slash(Distribution):
         return (st.norm.pdf(0)-st.norm.pdf(x))/x**2
     def cdf(self):
         if(x!=0):
-        return st.norm.cdf(x)-(st.norm.pdf(0)-st.norm.pdf(x))/x
+            return st.norm.cdf(x)-(st.norm.pdf(0)-st.norm.pdf(x))/x
         return 1/2
     def median(self):
         return 0
@@ -3703,7 +3702,7 @@ class suzuki(Distribution):
         return 2*math.sqrt(pi)*(-6*math.exp(nu**2)+3*math.exp(3*nu**2)+math.pi)/math.pow(4*math.exp(nu**2)-math.pi,3/2)
 
 class symprentice(Distribution): #symmetric prentice
-    def random(self,l,a)
+    def random(self,l,a):
         return prentice.random(0,l,a,a)
 
 class t(Distribution):
@@ -4042,7 +4041,6 @@ class upower(Distribution):
         return 0
     def median(self,k):
         return 0
-    def mode(self):
     def variance(self,k):
         return (2*k+1)/(2*k+3)
     def stddev(self,k):
