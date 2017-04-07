@@ -668,7 +668,6 @@ class chi(Distribution):
         return math.sqrt(chi2.random(k))
     def pdf(self,k,x):
         return math.pow(2,1-k/2)*math.pow(x,k-1)*math.exp(-x**2/2)/math.gamma(k/2)
-
     def mean(self,k):
         return math.sqrt(2)*math.gamma((k+1)/2)/math.gamma(k/2)
     def mode(self,k):
@@ -813,6 +812,17 @@ class doubleweibull(Distribution):
         if(z<=0):
             return 1/2*math.exp(-math.pow(math.abs(z),c))
         return 1-1/2*math.exp(-math.pow(math.abs(z),c))
+    def median(self,a,b,c):
+        return a
+    def mean(self,a,b,c):
+        return a
+    def variance(self,a,b,c):
+        return math.gamma((c+2)/c*b*b)
+    def stddev(self,a,b,c):
+        return math.sqrt(math.gamma((c+2)/c*b*b))
+    def skewness(self,a,b,c):
+        return 0
+
 
 class erlang(Distribution):
     def pdf(self,k,lmbda,x):
@@ -3283,6 +3293,24 @@ class pareto(Distribution):
 class pareto2var(Distribution): #shifted pareto
     def random(self,a,b,c):
         return a*(1/(math.pow(rg0(),b))-1)+c
+    def pdf(self,a,b,c,x):
+        return b/a*math.pow(a/(x+a-c),b+1)
+    def cdf(self,a,b,c,x):
+        return 1-math.pow(a/(y+a-c),b)
+    def kurtosis(self,a,b,c):
+        return 3*a**4*b*(3b**2+b+2)/((b-4)*(b-3)*(b-2)*(b-1)**4)
+    def mean(self,a,b,c):
+        return a/(b-1)+c
+    def median(self,a,b,c):
+        return a*(math.pow(2,1/b)-1)+c
+    def mode(self,a,b,c):
+        return a
+    def variance(self,a,b,c):
+        return a**2*b/((b-2)*(b-1)**2)
+    def stddev(self,a,b,c):
+        return math.sqrt(a**2*b/((b-2)*(b-1)**2))
+    def skewness(self,a,b,c):
+        return 2*a**3*b*(b+1)/((b-3)*(b-2)*(b-1)**3)
 
 class pareto3(Distribution):
     def random(self,mu,sigma,gmma):
@@ -4199,6 +4227,16 @@ class weibulllomax(Distribution):
         return 1-math.exp(-a*math.pow(math.pow(1+x/bb,aa)-1,b))
     def median(self,a,b,aa,bb):
         return bb*(math.pow(math.pow(-math.log(1/2)/a,1/b)+1,1/aa)-1)
+
+class weibulluniform(Distribution):
+    def random(self,a,b,t):
+        return t/(1+math.pow(-math.log(1-rg0())/a,-1/b))
+    def pdf(self,a,b,t,x):
+        return t*a*b/((t-x)**2)*math.pow(x/(t-x),b-1)*math.exp(-a*math.pow(x/(t-x),b))
+    def cdf(self,a,b,t,x);
+        return 1-math.exp(-a*math.pow(x/(t-x),b))
+    def median(self,a,b,t,x):
+        return t/(1+math.pow(-math.log(1/2)/a,-1/b))
 
 class weibullweibull(Distribution):
     def random(self,a,b,g,l):
