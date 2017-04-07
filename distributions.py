@@ -2425,6 +2425,18 @@ class kumaraswamypareto(Distribution):
     def median(self,a,b,bb,k):
         return bb/math.pow(1-math.pow(1-math.pow(1/2,1/b),1/a),1/k)
 
+class kumaraswamyweibullpoisson(Distribution):
+    def random(self,a,b,bb,c,l):
+        u=rg0()
+        return math.pow(-math.log(1+math.log(1-u*(1-math.exp(-l)))/l),1/c)/bb
+    def pdf(self,a,b,bb,c,l,x):
+        return 1-math.exp(-l*(1-math.exp(-math.pow(bb*x,c))))/(1-math.exp(-l))
+    def cdf(self,a,b,bb,c,l,x):
+        z=1-math.exp(-math.pow(bb*x,c))
+        return l*a*b*c*math.pow(bb,c)/(math.exp(l)-1)*math.pow(x,c-1)*math.pow(z,a-1)*math.pow(1-math.pow(z,a),b-1)*math.exp(l*math.pow(1-math.pow(z,a),b)-math.pow(bb*x,c))
+    def median(self,a,b,bb,c,l):
+        return math.pow(-math.log(1+math.log(1-(1-math.exp(-l))/2)/l),1/c)/bb
+
 class laha(Distribution):
     def random(self,a,s):
         n=r.random()
