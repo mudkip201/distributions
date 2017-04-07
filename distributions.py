@@ -1143,6 +1143,16 @@ class exponentiatedmodweibullext(Distribution): #exponentiated modified weibull 
     def median(self,a,b,g,l):
         return a*math.pow(-math.log(1-1/(a*l)*math.log(1-math.pow(1/2,1/g))),a/b)
 
+class exponentiatedweibullexp(Distribution): #exponentiated weibull exponential
+    def random(self,a,c,g):
+        return -math.log(1-math.pow(1-math.exp(-g*math.pow(-math.log(1-rg0()),1/a)),1/c))
+    def pdf(self,a,c,g,x):
+        return c*a/g*math.exp(-x)*math.pow(1-math.exp(-x),c-1)/(1-math.pow(1-math.exp(-x),c))*math.pow(-math.log(1-math.pow(1-math.exp(-x),c))/g,a-1)*math.exp(-math.pow(-math.log(1-math.pow(1-math.exp(-x),c))/g),a)
+    def cdf(self,a,c,g,x):
+        return 1-math.exp(-math.pow(-math.log(1-math.pow(1-math.exp(-x),c))/g,a))
+    def median(self,a,c,g):
+        return -math.log(1-math.pow(1-math.exp(-g*math.pow(-math.log(1/2),1/a)),1/c))
+
 class exponentiatedweibulllog(Distribution): #exponentiated weibull logarithmic
     def random(self,a,b,g,t):
         u=rg0()
