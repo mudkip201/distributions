@@ -2381,6 +2381,26 @@ class kumaraswamyhalfcauchy(Distribution):
     def median(self,a,b,d):
         return d*math.tan(math.pi/2*math.pow(1-math.pow(1/2,1/b),1/a))
 
+class kumaraswamyinvexp(Distribution): #kumaraswamy inverse exponential
+    def random(self,a,b,l):
+        return -a*l/math.log(1-math.pow(1-rg0(),1/b))
+    def pdf(self,a,b,l,x):
+        return a*b*l/x**2*math.exp(-a*l/x)*math.pow(1-math.exp(-a*l/x),b-1)
+    def cdf(self,a,b,l,x):
+        return 1-math.pow(1-math.exp(-a*l/x),b)
+    def median(self,a,b,l):
+        return -a*l/math.log(1-math.pow(1/2,1/b))
+
+class kumaraswamyinvweibull(Distribution): #kumaraswamy inverse weibull
+    def random(self,a,aa,b,bb):
+        return math.pow(-a*aa/math.log(1-math.pow(1-rg0(),1/b)),1/bb)
+    def pdf(self,a,aa,b,bb,x):
+        return a*b*aa*bb/math.pow(x,bb+1)*math.exp(-aa/math.pow(x,bb))*math.pow(math.exp(-a/math.pow(x,bb)),a-1)*math.pow(1-math.pow(math.exp(-aa/math.pow(x,bb)),a),b-1)
+    def cdf(self,a,aa,b,bb,x):
+        return 1-math.pow(1-math.exp(-a*aa/math.pow(x,bb)),b)
+    def median(self,a,aa,b,bb):
+        return math.pow(-a*aa/math.log(1-math.pow(1/2,1/b)),1/bb)
+
 class kumaraswamylinearexp(Distribution): #kumaraswamy linear exponential
     def random(self,a,b,l,t):
         return (-l+math.sqrt(l**2-(2*t/a)*math.log(1-(1-math.pow(1-rg0(),1/b)))))/t
