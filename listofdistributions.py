@@ -15,7 +15,7 @@ benini
 benktander weibull
 bernoulli
 beta
-betabinomial
+beta binomial
 beta-exponential
 beta-exponential burr XII
 beta-gompertz
@@ -74,6 +74,7 @@ exponentiated modified weibull extension
 exponentiated transmuted generalized rayleigh
 exponentiated transmuted weibull
 exponentiated weibull
+exponentiated weibull exponential
 exponentiated weibull-geometric
 exponentiated weibull-logarithmic (logistic?)
 exponentiated weibull-poisson
@@ -158,10 +159,13 @@ kumaraswamy generalized half-normal
 kumaraswamy generalized power-weibull
 kumaraswamy gumbel
 kumaraswamy half-cauchy
+kumaraswamy inverse exponential
+kumaraswamy inverse weibull
 kumaraswamy kumaraswamy
 kumaraswamy linear exponential
 kumaraswamy log-logistic
 kumaraswamy pareto
+kumaraswamy weibull poisson
 laha
 laplace
 levy
@@ -284,6 +288,7 @@ weibull-burr XII
 weibull-frechet
 weibull-generalized exponential
 weibull-lomax
+weibull-uniform
 weibull-weibull
 wein ?
 xgamma
