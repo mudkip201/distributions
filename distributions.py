@@ -4,6 +4,13 @@ import scipy.stats as st
 import scipy.special as sp
 
 
+
+'''
+This package intends to include random number generation for as many statistical distributions as possible. Where possible,
+the pdf, cdf, median, mode, mean, skewness, kurtosis, variance, and standard deviation will be provided.
+Any and all corrections and/or additions (as comments) are appreciated.
+'''
+
 '''
 An asterisk after the name means that I could not find the source I used to obtain the RNG function
 '''
