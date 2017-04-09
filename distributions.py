@@ -323,7 +323,7 @@ class benini(Distribution):
         return sigma*math.exp((-aa+math.sqrt(aa**2+bb*math.log(16)))/(2*bb))
 
 '''
-Benktander weibull distribution
+Benktander Weibull distribution
 '''
 class benktanderweibull(Distribution):
     def pdf(self,a,b,x):
@@ -913,7 +913,7 @@ class dagum(Distribution):
         return b*math.pow(-1+math.pow(2,1/p),-1/a)
 
 '''
-Dice roll generator
+Dice roller
 '''
 def dice(numdice=1,sides=6,expllow=0,explhigh=0,ahigh=0,alow=0):
     sum_=0
@@ -1820,7 +1820,7 @@ class gammashiftedgompertz(Distribution):
         return max(exp.random(b),b-gamma.random(aa,bb)*math.log(-math.log(r.random())))
 
 '''
-G and H distribution*
+G and H distribution
 '''
 class gandh(Distribution):
     def random(self,g,h):
@@ -2037,7 +2037,7 @@ class genlambda(Distribution): #generalized lambda
         return l1+(math.pow(n,l3)-math.pow((1-n),l4))/l2
 
 '''
-Generalized Lindley distribution*
+Generalized Lindley distribution
 '''
 class genlindley(Distribution): #generalized lindley
     def random(self,a,t,b):
@@ -2385,7 +2385,7 @@ class halfgenpearson7(Distribution): #half generalized pearson VII
         return genbetaprime.random(a,s,1/bb,m-1/bb,bb)
 
 '''
-Half-laha distribution*
+Half-Laha distribution*
 '''
 class halflaha(Distribution):
     def random(self,a,s):
@@ -3962,7 +3962,7 @@ class normalgamma(Distribution):
         return normal.random(mu,math.sqrt(1/(lmbda*n)))
 
 '''
-Normal-inverse gamma distribution*
+Normal-inverse gamma distribution
 '''
 class norminvgamma(Distribution): #normal-inverse gamma
     def random(self,aa,bb,mu,lmbda):
