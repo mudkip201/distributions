@@ -45,6 +45,7 @@ complementary exponentiated inverted weibull-poisson
 compound poisson
 cosine
 dagum
+discrete generalized rayleigh
 discrete weibull
 double weibull
 erlang
@@ -67,6 +68,7 @@ exponentiated gompertz
 exponentiated gumbel
 exponentiated kumaraswamy
 exponentiated kumaraswamy-dagum
+exponentiated kumaraswamy-inverse weibull
 exponentiated logistic (logarithmic?)
 exponentiated lomax
 exponentiated lomax-poisson
@@ -104,6 +106,7 @@ generalized gompertz
 generalized gumbel
 generalized inverse generalized exponential
 generalized inverse weibull
+generalized inverted exponential
 generalized lambda
 generalized lindley
 generalized linear failure rate-geometric
@@ -112,6 +115,7 @@ generalized logistic V
 generalized odd log-logistic
 generalized pareto
 generalized pearson VII
+generalized rayleigh
 generalized topp-leone
 generalized tukey-lambda
 generalized type I extreme value
@@ -185,15 +189,20 @@ logistic rayleigh
 logistic uniform
 logistic weibull
 log-laplace
-log-logistic
+log-logistic 
 log-normal
 log-triangle
 lomax
 maxwell-boltzmann
+marshall-olkin esscher transformed laplace distribution
 mcdonald log-logistic
 meridian
 mielke beta-kappa
 minimax
+modified burr III
+modified burr III burr XII
+modified burr III kumaraswamy
+modified burr III weibull
 modified extended generalized exponential
 moffat
 moyal
