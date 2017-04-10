@@ -148,6 +148,7 @@ johnson sb
 johnson sl
 johnson su
 k
+k-prime distribution
 kappa
 kolmogorov-smirnov one
 kolmogorov-smirnov two large
@@ -171,6 +172,7 @@ kumaraswamy log-logistic
 kumaraswamy pareto
 kumaraswamy weibull poisson
 laha
+lambda prime distribution
 laplace
 levy
 levy l
@@ -288,6 +290,7 @@ uniform
 uniform-product
 unit gamma
 u-power
+upsilon distribution
 u-quad
 voigt
 wakeby

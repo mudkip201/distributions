@@ -65,14 +65,63 @@ def qlog(x,q): #q-logarithm
     if(x>=0 and q!=1):
         return (math.pow(x,1-q)-1)/(1-q)
 
+def rg0():
+    n=r.random()
+    while(n==0):
+        n=r.random()
+    return n
+
+
 '''
-Alpha distribution*
+Dice roller
+'''
+def dice(numdice=1,sides=6,expllow=0,explhigh=0,ahigh=0,alow=0):
+    sum_=0
+    c=0
+    d=numdice
+    while(c<d):
+        a=r.randint(1,sides+1)
+        while(expllow!=0 and a<=expllow):
+            b=r.randint(1,sides+1)
+            a+=b
+            if(b>expllow):
+                break
+        while(explhigh!=0 and a>=explhigh):
+            b=r.randint(1,sides+1)
+            a+=b
+            if(b<explhigh):
+                break
+        if(ahigh!=0 and a>=ahigh):
+            d+=1
+        if(alow!=0 and a<=alow):
+            d+=1
+        sum_+=a
+        c+=1
+    return sum_
+
+
+'''
+Alpha distribution
 '''
 class alpha(Distribution):
     @staticmethod
     def random(aa):
         n=rg0()
         return 1/(aa-st.norm.ppf(n*st.norm.cdf(aa)))
+    @staticmethod
+    def pdf(aa,x):
+        return 1/(x**2*st.norm.cdf(aa)*math.sqrt(2*math.pi))*math.exp(-1/2*(aa-1/x)**2)
+    @staticmethod
+    def cdf(aa,x):
+        return st.norm.cdf(aa-1/x)/st.norm.cdf(aa)
+    @staticmethod
+    def median(aa):
+        n=rg0()
+        return 1/(aa-st.norm.ppf(st.norm.cdf(aa)/2))
+    @staticmethod
+    def ppf(aa):
+        n=rg0()
+        return 1/(aa-st.norm.ppf(q*st.norm.cdf(aa)))
 
 '''
 Amoroso distribution
@@ -277,7 +326,6 @@ class asymlaplace(Distribution): #asymmetric laplace
             return k/math.sqrt(2)*math.log((1+math.pow(k,2))/math.pow(k,2)*q)
         return 1/(k*math.sqrt(2))*math.log((1+math.pow(k,2))*(1-q))
 
-
 '''
 Balding-Nichols distribution
 '''
@@ -374,7 +422,7 @@ class bates(Distribution):
         return 0
 
 '''
-Behrens-Fisher distribution*
+Behrens-Fisher distribution
 '''
 class behrensfisher(Distribution):
     @staticmethod
@@ -505,7 +553,8 @@ class bernoulli(Distribution):
     @staticmethod
     def skewness(p):
         if(p<0 or p>1):
-            raise InvalidInputError("p must be between 0 and 1 inclusive")        return (1-2*p)/math.sqrt(p*(1-p))
+            raise InvalidInputError("p must be between 0 and 1 inclusive")
+        return (1-2*p)/math.sqrt(p*(1-p))
     @staticmethod
     def ppf(p,q):
         if(p<0 or p>1):
@@ -602,7 +651,7 @@ class betaexpburr12(Distribution): #beta-exponential burr XII
         return math.pow(math.pow(1-math.pow(u,1/b),-1/k)-1,1/c)
 
 '''
-Beta-exponential distribution*
+Beta-exponential distribution
 '''
 class betaexp(Distribution): #beta-exponential
     @staticmethod
@@ -730,6 +779,28 @@ class birnbaumsaunders(Distribution): #standard fatigue-life
         return 1/4.0*math.pow(gmma*st.norm.ppf(q)+math.sqrt(4+math.pow(gmma*st.norm.ppf(q),2)),2)
 
 '''
+Boltzmann distribution
+'''
+class boltzmann(Distribution):
+    @staticmethod
+    def random(N,l):
+        return math.ceil(-math.log(1-rg0()*(1-math.exp(-l*N)))/l-1)
+    @staticmethod
+    def pdf(N,l,x):
+        return (1-math.exp(-l))/(1-math.exp(-l*N))*math.exp(-l*x)
+    @staticmethod
+    def cdf(N,l,x):
+        if(x>=N-1):
+            return 1
+        return (1-math.exp(-l*(math.floor(x)+1)))/(1-math.exp(-l*N))
+    @staticmethod
+    def median(N,l):
+        return math.ceil(-math.log(1-(1-math.exp(-l*N))/2)/l-1)
+    @staticmethod
+    def ppf(N,l):
+        return math.ceil(-math.log(1-q*(1-math.exp(-l*N)))/l-1)
+
+'''
 Bounded pareto distribution
 '''
 class boundedpareto(Distribution):
@@ -855,7 +926,7 @@ class burr3(Distribution):
         return math.pow(1+math.pow((x-l)/s,-k),-r)
     @staticmethod
     def median(r,k,l,s):
-        return math.pow(math.pow(1/2,-1/r)-1,-1/k)+;
+        return math.pow(math.pow(1/2,-1/r)-1,-1/k)+l
     @staticmethod
     def ppf(r,k,l,s,q):
         return s*math.pow(math.pow(q,-1/r)-1,-1/k)+l
@@ -919,6 +990,7 @@ class burr7(Distribution):
     @staticmethod
     def ppf(r,l,s,q):
         return s*math.atanh(math.pow(q*math.pow(2,r),1/r)-1)+l
+
 '''
 Burr VIII distribution
 '''
@@ -1229,33 +1301,6 @@ class dagum(Distribution):
         return b*math.pow(math.pow(q,-1/p)-1,-1/a)
 
 '''
-Dice roller
-'''
-def dice(numdice=1,sides=6,expllow=0,explhigh=0,ahigh=0,alow=0):
-    sum_=0
-    c=0
-    d=numdice
-    while(c<d):
-        a=r.randint(1,sides+1)
-        while(expllow!=0 and a<=expllow):
-            b=r.randint(1,sides+1)
-            a+=b
-            if(b>expllow):
-                break
-        while(explhigh!=0 and a>=explhigh):
-            b=r.randint(1,sides+1)
-            a+=b
-            if(b<explhigh):
-                break
-        if(ahigh!=0 and a>=ahigh):
-            d+=1
-        if(alow!=0 and a<=alow):
-            d+=1
-        sum_+=a
-        c+=1
-    return sum_
-
-'''
 Discrete generalized Rayleigh distribution
 '''
 class discretegenrayleigh(Distribution):
@@ -1302,7 +1347,6 @@ class discreteweibull(Distribution):
     @staticmethod
     def ppf(aa,bb,q):
         return math.pow(-math.log(1-q),1/bb)*aa-1
-
 
 '''
 Double Weibull distribution
@@ -1618,7 +1662,6 @@ class expkumaraswamy(Distribution): #exponentiated kumaraswamy
     @staticmethod
     def ppf(a,b,g,q):
         return math.pow(1-math.pow(1-math.pow(q,1/g),1/b),1/a)
-
 
 '''
 Exponentiated Kumaraswamy-Dagum distribution
@@ -1949,7 +1992,6 @@ class exponentiatedlomaxpoisson(Distribution):
     def ppf(a,b,g,l,q):
         return (math.pow(-math.pow(-math.log(-q*(math.exp(l)-1)+math.exp(l))/l,1/a)+1,-1/g)-1)/b
 
-
 '''
 Exponentiated modified Weibull extension distribution
 '''
@@ -2224,7 +2266,6 @@ class extremevalue(Distribution):
             raise InvalidInputError("sigma must be positive")
         return mu-sigma*math.log(-math.log(q))
 
-
 '''
 Extreme value maximum distribution*
 '''
@@ -2388,15 +2429,20 @@ class fisk(Distribution):
             raise InvalidInputError("b and c must be bigger than 0")
         return a+b*math.pow(q/(1-q),1/c)
 
-
 '''
-Friemer, Mudholkar, Kollia, and Lin generalized Tukey-lambda distribution*
+Friemer, Mudholkar, Kollia, and Lin generalized Tukey-lambda distribution
 '''
 class fmlkl(Distribution): #Friemer, Mudholkar, Kollia, and Lin generalized tukey-lambda
     @staticmethod
     def random(l1,l2,l3,l4):
         n=r.random()
-        return l1+(1/l2)*((math.pow(n,l3)-1)/l3-((math.pow(1-n),l4)-1)/l4)
+        return l1+(1/l2)*((math.pow(n,l3)-1)/l3-((math.pow(1-n,l4)-1)/l4))
+    @staticmethod
+    def median(l1,l2,l3,l4):
+        return l1+(1/l2)*((math.pow(1/2,l3)-1)/l3-((math.pow(1-n,l4)-1)/l4))
+    @staticmethod
+    def quantile(l1,l2,l3,l4,q):
+        return l1+(1/l2)*((math.pow(q,l3)-1)/l3-((math.pow(1-q,l4)-1)/l4))
 
 '''
 Folded normal distribution
@@ -2417,11 +2463,6 @@ class foldednormal(Distribution):
     def mean(m,s):
         c=math.abs(m)/s
         return math.sqrt(2/math.pi)*math.exp(-c**2/2)+c*math.erf(c/math.sqrt(2))
-
-#class foldedt(Distribution):
-#    @staticmethod
-#    def random():
-#        return abs(t.random())
 
 '''
 Frechet distribution
@@ -2467,12 +2508,6 @@ class frechet(Distribution):
         if(aa<=0 or s<=0):
             raise InvalidInputError("aa and s must be positive")
         return -math.pow(math.log(q),-1/aa)*(m*math.pow(-math.log(q),1/aa)+s)
-
-def rg0():
-    n=r.random()
-    while(n==0):
-        n=r.random()
-    return n
 
 '''
 Gamma distribution
@@ -2544,7 +2579,7 @@ class gandh(Distribution):
         return math.exp(g*st.norm.ppf(q)-1)*(math.exp((h*math.pow(st.norm.ppf(q),2))/2)/g)
 
 '''
-Gauss hyper distribution
+Gauss hypergeometric distribution
 '''
 class gausshyper(Distribution):
     @staticmethod
@@ -2771,6 +2806,7 @@ class geninvgenexp(Distribution): #generalized inverse generalized exponential
     @staticmethod
     def ppf(a,g,l,q):
         return l*g/(math.log(1-math.pow(1-q,1/a)))
+
 '''
 Generalized inverse Weibull distribution
 '''
@@ -2812,13 +2848,19 @@ class geninvexp(Distribution):
         return -l/math.log(1-math.pow(1-q,1/a))
 
 '''
-Generalized lambda distribution*
+Generalized lambda distribution
 '''
-class genlambda(Distribution): #generalized lambda
+class genlambda(Distribution):
     @staticmethod
     def random(l1,l2,l3,l4):
         n=r.random()
         return l1+(math.pow(n,l3)-math.pow((1-n),l4))/l2
+    @staticmethod
+    def median(l1,l2,l3,l4):
+        return l1+(math.pow(1/2,l3)-math.pow(1/2,l4))/l2
+    @staticmethod
+    def quantile(l1,l2,l3,l4,q):
+        return l1+(math.pow(q,l3)-math.pow((1-q),l4))/l2
 
 '''
 Generalized Lindley distribution
@@ -2849,7 +2891,6 @@ class genlinearfailurerategeo(Distribution): #generalized linear failure rate-ge
     def ppf(a,b,aa,p,q):
         u=rg0()
         return -a/b+math.sqrt(a**2-2*b*math.log(1-math.pow((1-p)*q)/(1-p*q),1/aa))/b
-
 
 '''
 Generalized logistic distribution
@@ -3212,7 +3253,6 @@ class gompertz(Distribution):
             raise InvalidInputError("eta and b must be positive")
         return math.log((-math.log(1-q)/eta)+1)/b
 
-
 '''
 Gompertz-Makeham distribution*
 '''
@@ -3293,7 +3333,6 @@ class gumbel(Distribution):
         if(bb<=0):
             raise InvalidInputError("bb must be positive")
         return mu-bb*math.log(-math.log(q))
-
 
 '''
 Gumbel 2 distribution*
@@ -3484,7 +3523,6 @@ class hyperbolicsecant(Distribution):
     @staticmethod
     def ppf(q):
         return 1/2*math.sech(math.pi*q/2)
-
 
 '''
 Hyperexponential distribution
@@ -3790,6 +3828,14 @@ class k(Distribution):
     @staticmethod
     def random(a,b):
         return math.sqrt(exp.random(1)*gamma.random(a,b/a))
+
+'''
+K-prime distribution
+'''
+class kprime(Distribution):
+    @staticmethod
+    def random(a,b,nu1,nu2):
+        return (b*normal.random(0,1)+a*math.sqrt(chi2.random(nu1)/nu1))/math.sqrt(chi2.random(nu2)/nu2)
 
 '''
 Kappa distribution*
@@ -4231,6 +4277,14 @@ class laha(Distribution):
         return halflaha.random(a,s)
 
 '''
+Lambda-prime distribution
+'''
+class lambdaprime(Distribution):
+    @staticmethod
+    def random(t,nu):
+        return normal.random(0,1)+t*math.sqrt(chi2.random(nu)/nu)
+
+'''
 Laplace distribution
 '''
 class laplace(Distribution):
@@ -4495,7 +4549,6 @@ class logistic(Distribution):
         if(s<=0):
             raise InvalidInputError("s must be positive")
         return mu+s*math.log(q/(1-q))
-
 
 '''
 Logistic Burr XII distribution
@@ -5465,7 +5518,6 @@ class oddgenexpgompertz(Distribution): #odd generalized exponential-gompertz
     def ppf(a,b,c,l,q):
         return 1/c*math.log(1+c/l*math.log(1-1/a*math.log(1-math.pow(q,1/b))))
 
-
 '''
 Odd generalized exponentiated linear failure rate distribution
 '''
@@ -5690,6 +5742,28 @@ class pearson7(Distribution):
     @staticmethod
     def random(s,m):
         return normal.random(0,s)/math.sqrt(gamma.random(1/2,m-1/2))
+
+'''
+Planck distribution
+'''
+class planck(Distribution):
+    @staticmethod
+    def random(l):
+        return math.ceil(-math.log(1-rg0())/l-1)
+    @staticmethod
+    def pdf(l,x):
+        if(x*l>=0):
+            return (1-math.exp(-l))*math.exp(-l*x)
+    @staticmethod
+    def cdf(l,x):
+        if(x*l>=0):
+            return 1-math.exp(-l*(math.floor(x)+1))
+    @staticmethod
+    def median(l):
+        return math.ceil(-math.log(1/2)/l-1)
+    @staticmethod
+    def ppf(l,q):
+        return math.ceil(-math.log(1-q)/l-1)
 
 '''
 Poisson distribution
@@ -6278,6 +6352,7 @@ class shiftedloglogistic(Distribution):
     @staticmethod
     def ppf(xi,mu,sigma,q):
         return (math.pow(1/n-2,-xi)*(xi*mu*math.pow(1/q-2,xi)+sigma))/xi
+
 '''
 Skellam distribution
 '''
@@ -6644,7 +6719,7 @@ class transmutedinvexp(Distribution): #transmuted inverse exponential
 '''
 Transmuted Kumaraswamy distribution
 '''
-class transmutedkumaraswami(Distribution):
+class transmutedkumaraswamy(Distribution):
     @staticmethod
     def random(a,l,t):
         q=rg0()
@@ -6806,7 +6881,6 @@ class triangular(Distribution):
             return a+math.sqrt(q*(b-a)*(c-a))
         return b-math.sqrt((1-q)*(b-a)*(c-a))
 
-
 '''
 Truncated exponential distribution
 '''
@@ -6910,6 +6984,7 @@ class twosidedpower(Distribution):
         if(q<=theta):
             return theta*math.pow(q/theta,1/d)
             return 1-(1-theta)*math.pow((1-q)/(1-d),1/d)
+
 '''
 Uniform distribution
 '''
@@ -6974,7 +7049,6 @@ class uniform(Distribution):
             raise InvalidInputError("b must be greater than a")
         return ((b-a)*q+a)
 
-
 '''
 Uniform product distribution*
 '''
@@ -7030,6 +7104,17 @@ class upower(Distribution):
         return math.pow((2*q-1),1/(2*k+1))
 
 '''
+Upsilon distribution
+'''
+class upsilon(Distribution):
+    @staticmethod
+    def random(ts, nus):
+        y=0
+        for i in range(len(ts)):
+            y+=ts[i]*math.sqrt(chi2.random(nus[i]))
+        return y
+
+'''
 U quadratic distribution*
 '''
 class uquad(Distribution):
@@ -7058,19 +7143,20 @@ class voigt(Distribution):
         return normal.random(0,sigma)+cauchy.random(a,s)
 
 '''
-Wakeby distribution*
+Wakeby distribution
 '''
 class wakeby(Distribution):
     @staticmethod
-    def random(a,b,d,g,x):
+    def random(a,b,c,d,m):
         n=r.random()
-        return x+(a/b)*(1-math.pow(1-n,b))-(g/d)*(1-math.pow(1-n,-d))
+        #return -a*pow(1-n,b)+c*pow(1-n,-d)+e
+        return m+a*(1-math.pow(1-n,b))-c*(1-math.pow(1-n,-d))
     @staticmethod
-    def median(a,b,d,g,x):
-        return x+(a/b)*(1-math.pow(1/2,b))-(g/d)*(1-math.pow(1/2,-d))
+    def median(a,b,c,d,m):
+        return m+a*(1-math.pow(1/2,b))-c*(1-math.pow(1/2,-d))
     @staticmethod
-    def random(a,b,d,g,x,q):
-        return x+(a/b)*(1-math.pow(1-q,b))-(g/d)*(1-math.pow(1-q,-d))
+    def random(a,b,c,d,m,q):
+        return m+a*(1-math.pow(1-q,b))-c*(1-math.pow(1-q,-d))
 
 '''
 Wedge distribution*
@@ -7155,7 +7241,6 @@ class weibull(Distribution):
             raise InvalidInputError("k and lambda must be positive")
         return lmbda*math.pow((-math.log(q)),1/k)
 
-
 '''
 Weibull-Burr XII distribution*
 '''
@@ -7190,7 +7275,6 @@ class weibullfrechet(Distribution):
     @staticmethod
     def ppf(a,b,aa,bb,q):
         return aa*math.pow(math.log(1+math.pow(-math.log(1-q)/a,-1/b)),-1/bb)
-
 
 '''
 Weibull-generalized exponential distribution
