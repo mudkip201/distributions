@@ -24,6 +24,7 @@ beta prime
 bhattacharya negative binomial
 binomial
 birnbaum-saunders
+boltzmann
 bounded pareto
 bradford
 bramwell-holdsworth-pinton
@@ -95,7 +96,7 @@ gamma
 gamma-exponential
 gamma shifted gompertz
 g and h
-gauss hyper
+gauss hypergeometric
 gaussian kuzmin
 generalized beta prime
 generalized exponential
@@ -148,7 +149,7 @@ johnson sb
 johnson sl
 johnson su
 k
-k-prime distribution
+k-prime
 kappa
 kolmogorov-smirnov one
 kolmogorov-smirnov two large
@@ -172,7 +173,7 @@ kumaraswamy log-logistic
 kumaraswamy pareto
 kumaraswamy weibull poisson
 laha
-lambda prime distribution
+lambda prime
 laplace
 levy
 levy l
@@ -193,7 +194,7 @@ logistic weibull
 log-laplace
 log-logistic 
 log-normal
-log-triangle
+log-triangular
 lomax
 maxwell-boltzmann
 marshall-olkin esscher transformed laplace distribution
@@ -231,6 +232,7 @@ pareto 3
 pareto 4
 pearson III
 pearson VII
+planck
 poisson
 poisson exponential
 polya
@@ -250,7 +252,7 @@ reciprocal inverse gaussian
 rectified normal
 reflected power
 reflected topp-leone
-reversed burr XII
+reversed burr II
 rice
 scaled chi square
 scaled inverse chi square
@@ -290,7 +292,7 @@ uniform
 uniform-product
 unit gamma
 u-power
-upsilon distribution
+upsilon
 u-quad
 voigt
 wakeby

@@ -183,6 +183,7 @@ class anglit(Distribution):
     @staticmethod
     def ppf(q):
         return math.asin(math.sqrt(q))-math.pi/4
+
 '''
 Arcsine distribution
 '''
@@ -457,7 +458,6 @@ class benini(Distribution):
             raise InvalidInputError("aa, bb, and gamma must be greater than 0")
         return sigma*math.exp((-aa+math.sqrt(aa**2+bb*math.log(16)))/(2*bb))
 
-
 '''
 Benktander Weibull distribution
 '''
@@ -488,7 +488,6 @@ class benktanderweibull(Distribution):
         if(b<=0 or b>1):
             raise InvalidInputError("b must be greater than 0 and less than or equal to 1")
         return math.pow((b-1)*sp.lambertw(-(a*math.exp(-a/(b+1))*math.pow(1-q,b/(b+1)))/(b-1))/a,1/b)
-
 
 '''
 Bernoulli distribution
@@ -562,7 +561,6 @@ class bernoulli(Distribution):
         if(q>=p):
             return 1
         return 0
-
 
 '''
 Beta distribution
@@ -5671,7 +5669,6 @@ class pareto(Distribution):
             raise InvalidInputError("alpha and xm must be positive")
         return xm/math.pow(q,1/alpha)
 
-
 '''
 Pareto II variant (Shifted Pareto) distribution
 '''
@@ -5709,7 +5706,6 @@ class pareto2var(Distribution): #shifted pareto
     @staticmethod
     def ppf(a,b,c,q):
         return a*(1/(math.pow(q,b))-1)+c
-
 
 '''
 Pareto III distribution*
