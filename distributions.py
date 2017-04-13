@@ -6,8 +6,7 @@ import scipy.special as sp
 
 
 '''
-This package intends to include random number generation for as many statistical distributions as possible. Where possible,
-the pdf, cdf, median, mode, mean, skewness, kurtosis, variance, and standard deviation will be provided.
+This package intends to include random number generation for as many statistical distributions as possible. Where possible, the pdf, cdf, median, mode, mean, skewness, kurtosis, variance, standard deviation, and MLE estimation of parameters will be provided.
 Any and all corrections and/or additions (as comments) are appreciated.
 '''
 
@@ -561,6 +560,9 @@ class bernoulli(Distribution):
         if(q>=p):
             return 1
         return 0
+    @staticmethod
+    def mle(x):
+        return {'p':sum(x)/len(x)}
 
 '''
 Beta distribution
@@ -1875,6 +1877,9 @@ class exponential(Distribution):
         if(lmbda<=0):
             raise InvalidInputError("lmbda must be bgger than 0")
         return -math.log(q)/lmbda
+    @staticmethod
+    def mle(x):
+        return {'lambda':len(x)/sum(x)}
 
 '''
 Exponentiated exponential-binomial distribution
@@ -3575,7 +3580,7 @@ class hypoexp(Distribution): #hypoexponential
         sum_=0
         for i in range(lmbdas):
             sum_+=exp.random(lmbdas[i])
-        return sum
+        return sum_
 
 '''
 Inverse chi-square distribution
@@ -4349,6 +4354,11 @@ class laplace(Distribution):
         if(b<=0):
             raise InvalidInputError("b must be positive")
         return mu-b*(math.abs(q-0.5)/(q-0.5))*math.log(1-2*math.abs(q-0.5))
+    @staticmethod
+    def mle(x):
+        mu=np.median(x)
+        b=np.average(np.abs(np.array(x)-mu))/len(x)
+        return {'mu':mu,'b':b}
 
 '''
 Levy distribution
@@ -5477,6 +5487,9 @@ class normal(Distribution):
         if(sigma2<=0):
             raise InvalidInputError("sigma2 must be positive")
         return 0
+    @staticmethod
+    def mle(x):
+        return {'mu':avg(x),'sigma2':np.var(x)*(len(x)-1)/len(x)}
 
 '''
 Normal-gamma distribution*
