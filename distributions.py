@@ -1,7 +1,9 @@
 import math
+import numpy as np
 from numpy import random as r
 import scipy.stats as st
 import scipy.special as sp
+import scipy.optimize as op
 
 
 
@@ -139,7 +141,7 @@ class amoroso(Distribution):
             raise InvalidInputError("x must be greater than a")
         if(theta<0 and x>a):
             raise InvalidInputError("x must be less than a")
-        return 1/math.gamma(aa)*math.abs(bb/theta)*math.pow((x-a)/theta,aa*bb-1)*math.exp(-math.pow((x-a)/theta,bb))
+        return 1/math.gamma(aa)*abs(bb/theta)*math.pow((x-a)/theta,aa*bb-1)*math.exp(-math.pow((x-a)/theta,bb))
     @staticmethod
     def mean(a,theta,aa,bb):
         if(aa+1/bb>=0):
@@ -161,6 +163,14 @@ class amoroso(Distribution):
         if(aa+2/bb>=0):
             return theta*math.sqrt(math.gamma(aa+2/bb)/math.gamma(aa)-(math.gamma(aa+1/bb)/math.gamma(aa))**2)
         return None
+    @staticmethod
+    def mle(x): #not working?
+        args0=[1.0,1.0,1.0,1.0]
+        n=len(x)
+        func = lambda args_ : -(-n*math.log(math.gamma(args_[2]))+n*math.log(abs(args_[3]/args_[1]))+n*(args_[2]*args_[3]-1)*np.sum(np.log(x)-math.log(args_[2])-math.log(args_[1]))+np.sum(np.power((np.array(x)-args_[2])/args_[1],args_[3])))
+        ret=op.differential_evolution(func,[(0.01,100),(0.01,100),(0.01,min(x)),(0.01,10)]).x.tolist()
+        #ret=op.basinhopping(func,args0)
+        return {'a':ret[0],'theta':ret[1],'aa':ret[2],'bb':ret[3]}
 
 '''
 Anglit distribution
@@ -279,7 +289,7 @@ class asymlaplace(Distribution): #asymmetric laplace
             return 1-1/(1+kppa**2)*math.pow(-lmbda*kppa*(x-m))
         return kppa**2/(1+kppa**2)*math.pow(lmbda/kppa*(x-m))
     @staticmethod
-    def random(m,kppa,lmbda):
+    def random(m,lmbda,kppa):
         if(kppa<=0 or lmbda<=0):
             raise InvalidInputError("kppa and lambda must be greater than 0")
         n=rg0()
@@ -314,12 +324,12 @@ class asymlaplace(Distribution): #asymmetric laplace
             raise InvalidInputError("kppa and lambda must be greater than 0")
         return 2*(1-math.pow(kppa,6))/(math.pow(math.pow(kppa,4)+1,3/2))
     @staticmethod
-    def entropy(m,kppa,lmbda):
+    def entropy(m,lmbda,kppa):
         if(kppa<=0 or lmbda<=0):
             raise InvalidInputError("kppa and lambda must be greater than 0")
         return math.log(math.exp(1)*(1+kppa**2)/(kppa*lmbda))
     @staticmethod
-    def ppf(m,kppa,lmbda,q):
+    def ppf(m,lmbda,kppa,q):
         if(kppa<=0 or lmbda<=0):
             raise InvalidInputError("kppa and lambda must be greater than 0")
         if(q<=(math.pow(k,2))/(1+math.pow(k,2))):
@@ -388,7 +398,7 @@ Bates distribution
 '''
 class bates(Distribution):
     @staticmethod
-    def random():
+    def random(n):
         if(n%1!=0 or n<1):
             raise InvalidInputError("n must be a positive integer greater than 0")
         avg=0
@@ -465,7 +475,7 @@ class benktanderweibull(Distribution):
     def pdf(a,b,x):
         if(b<=0 or b>1 or x<1):
             raise InvalidInputError("b must be greater than 0 and less than or equal to 1, and x must be greater than or equal to 1")
-        return math.exp(a*(1-math.pow(x,b))/b)*math.pow(x,b-2)*(1-b+a*math.pow(x,b))
+        return math.exp(a*(1-math.pow(x,b))/b)*math.pow(x,b-1)*(1-b+a*math.pow(x,b))
     @staticmethod
     def cdf(a,b,x):
         if(b<=0 or b>1 or x<1):
@@ -487,6 +497,17 @@ class benktanderweibull(Distribution):
         if(b<=0 or b>1):
             raise InvalidInputError("b must be greater than 0 and less than or equal to 1")
         return math.pow((b-1)*sp.lambertw(-(a*math.exp(-a/(b+1))*math.pow(1-q,b/(b+1)))/(b-1))/a,1/b)
+    @staticmethod
+    def mle(x):
+        args0=[2.0,2.0]
+        n=len(x)
+        func = lambda args_: -(np.sum(args_[0]*(1-np.power(np.array(x),args_[1]))/args_[1])+(args_[1]-1)*np.sum(np.log(x))-n*math.log(args_[1])+n*math.log(args_[0])+args_[1]*np.sum(np.log(x)))
+        #mybounds=myBounds((1,1))
+        #ret=op.basinhopping(func2,args0,callback=print_fun, accept_test=mybounds)
+        #print(ret)
+        ret=op.differential_evolution(func,[(0.00001,100),(0.0001,100)]).x.tolist()
+        #print(ret)
+        return {'a':ret[0],'b':ret[1]}
 
 '''
 Bernoulli distribution
@@ -799,6 +820,13 @@ class boltzmann(Distribution):
     @staticmethod
     def ppf(N,l):
         return math.ceil(-math.log(1-q*(1-math.exp(-l*N)))/l-1)
+    @staticmethod
+    def mle(x):
+        args0=[1.0,1.0]
+        n=len(x)
+        func= lambda n,x,args_: n*math.log(1-math.exp(-args_[1]))-n*math.log(1-math.exp(-args_[1]*args_[0]))-args_[1]*sum(x)
+        ret=op.basinhopping(func,args0)
+        return {'N':ret[0],'l':ret[1]}
 
 '''
 Bounded pareto distribution
@@ -865,7 +893,13 @@ class boundedpareto(Distribution):
         if(H<=L):
             raise InvalidInputError("H must be bigger than L")
         return math.pow(-(q*math.pow(H,aa)-q*math.pow(L,aa)-math.pow(H,aa))/(math.pow(H,aa)*math.pow(L,aa)),-1/aa)
-
+    @staticmethod
+    def mle(x):
+        args0=[1,1,1]
+        n=len(x)
+        func = lambda x,n,args_ : n*math.log(args_[0])+n*args_[0]*math.log(args_[2])-(args_[0]+1)*np.sum(np.log(x))-n*math.log(1-math.pow(args_[2]/args_[1],args_[0]))
+        ret=op.basinhopping(func,args0)
+        return {'aa':ret[0],'H':ret[1],'L':ret[2]}
 '''
 Bradford distribution*
 '''
@@ -910,6 +944,13 @@ class burr2(Distribution):
         if(r<=0 or sigma<=0):
             raise InvalidInputError("r and sigma must be bigger than 0")
         return mu+sigma*math.log(math.pow(1/q,1/r)-1)
+    @staticmethod
+    def mle(x):
+        args0=[1,1,1]
+        n=len(x)
+        func = lambda n,x,args_: -n*math.log(args_[2])+n*math.log(args_[0])-(args_[0]+1)*np.sum(np.log(1+np.exp((-np.array(x)+args_[1])/args_[2])))-np.sum((np.array(x)-args_[1])/args_[2])
+        ret=op.basinhopping(func,args0)
+        return {'r':ret[0],'mu':ret[1],'sigma':ret[2]}
 
 '''
 Burr III distribution
@@ -930,6 +971,13 @@ class burr3(Distribution):
     @staticmethod
     def ppf(r,k,l,s,q):
         return s*math.pow(math.pow(q,-1/r)-1,-1/k)+l
+    @staticmethod
+    def mle(x):
+        args0=[1,1,1,1]
+        n=len(x)
+        func = lambda n,x,args_: -n*math.log(args_[3])+n*math.log(args_[0])+n*math.log(args_[1])+(args_[0]*args_[1]-1)*np.sum(np.log((np.array(x)-args_[2])/args_[3]))-(args_[0]+1)*np.log(1+np.power(x,args_[1]))
+        ret=op.basinhopping(func,args0)
+        return {'r':ret[0],'k':ret[1],'l':ret[2],'s':ret[3]}
 
 '''
 Burr V distribution
@@ -950,6 +998,13 @@ class burr5(Distribution):
     @staticmethod
     def ppf(r,k,l,s,q):
         return s*math.atan(-math.log((math.pow(q,-1/r)-1)/k))+l
+    @staticmethod
+    def mle(x):
+        args0=[1,1,1,1]
+        n=len(x)
+        func = lambda x,n,args_: n*math.log(args_[0])+n*math.log(args_[1])-(args_[0]+1)*np.sum(np.log(np.power((np.exp(np.tan((x-args_[2])/args_[3]))/args_[1]),-1)+1))+2*np.sum(np.log(np.sec((x-args_[2])/args_[3])))-np.sum(np.tan(x))
+        ret=op.basinhopping(func,args0)
+        return {'r':ret[0],'k':ret[1],'l':ret[2],'s':ret[3]}
 
 '''
 Burr VI distribution
@@ -959,7 +1014,7 @@ class burr6(Distribution):
     def random(r,k,l,s):
         return s*math.asinh(-math.log((math.pow(rg0(),-1/r)-1)/k))+l
     @staticmethod
-    def pdf(r,k,l,s,x):
+    def pdf(r,k,s,l,x):
         return r*k*math.pow(1+k/math.exp(math.sinh(x)),-r-1)*math.cosh(x)/math.exp(math.sinh(x))
     @staticmethod
     def cdf(r,k,l,s,x):
@@ -970,6 +1025,9 @@ class burr6(Distribution):
     @staticmethod
     def ppf(r,k,l,s,q):
         return s*math.asinh(-math.log((math.pow(q,-1/r)-1)/k))+l
+#   @staticmethod
+#       def mle(x):
+#       args0=[1,1,1,1]
 
 '''
 Burr VII distribution
@@ -990,6 +1048,13 @@ class burr7(Distribution):
     @staticmethod
     def ppf(r,l,s,q):
         return s*math.atanh(math.pow(q*math.pow(2,r),1/r)-1)+l
+    @staticmethod
+    def mle(x):
+        args0=[1,1,1]
+        n=len(x)
+        func = lambda n,x,args_: -n*math.log(args_[2])+n*math.log(args_[0])+2*np.sum(np.log(x))+(args_[0]-1)*np.log(1+np.tan((np.array(x)-args_[1])/args_[2]))-args_[0]*math.log(2)
+        ret=op.basinhopping(func,args0)
+        return {'r':ret[0],'l':ret[1],'s':ret[2]}
 
 '''
 Burr VIII distribution
@@ -1010,6 +1075,13 @@ class burr8(Distribution):
     @staticmethod
     def ppf(r,l,s,q):
         return s*math.log(math.tan(math.pi/2*math.pow(q,1/r)))+l
+    @staticmethod
+    def mle(x):
+        args0=[1,1,1]
+        n=len(x)
+        func= lambda x,n,args_: -n*math.log(args_[2])+n*math.log(args_[1])+np.sum((np.array(x)-args_[1])/args_[2])+n*args_[0]*math.log(2/math.pi)+(args_[0]-1)*np.sum(np.log(np.atan(np.exp((np.array(x)-args_[1])/args_[2]))))-np.sum(np.log(1+np.exp(2*(np.array(x)-args_[1])/args_[2])))
+        ret=op.basinhopping(func,args0)
+        return {'r':ret[0],'l':ret[1],'s':ret[2]}
 
 '''
 Burr X distribution
@@ -1031,6 +1103,13 @@ class burr10(Distribution):
     @staticmethod
     def ppf(r,k,l,s,q):
         return math.log(math.pow((2/(1-q)-2)/k+1,1/r)-1)*s+l
+    @staticmethod
+    def mle(x):
+        args0=[1,1,1,1]
+        n=len(x)
+        func = lambda x,n,args_: -n*math.log(args_[3])+n*math.log(2)+np.sum((np.array(x)-args_[2])/args_[3])+(args_[0]-1)*np.sum(np.log(1+np.exp((np.array(x)-args_[2])/args_[3])))+n*math.log(args_[1])+n*math.log(args_[0])-2*np.sum(np.log(args_[1]*np.exp((np.array(x)-args_[2])/args_[3])+2-args_[1]))
+        ret=op.basinhopping(func,args0)
+        return {'r':ret[0],'k':ret[1],'l':ret[2],'s':ret[3]}
 
 '''
 Burr XII distribution
@@ -1061,6 +1140,13 @@ class burr12(Distribution):
         if(c<=0 or k<=0):
             raise InvalidInputError("c and k must be bigger than 0")
         math.pow(math.pow(1-q,-1/k)-1,1/c)
+    @staticmethod
+    def mle(x):
+        args0=[1,1]
+        n=len(x)
+        func = lambda x,n,args_: n*math.log(args_[0])+n*math.log(args_[1])+(args_[0]-1)*np.sum(np.log(x))-(args_[1]+1)*np.sum(np.log(np.power(x,args_[0])+1))
+        ret=op.basinhopping(func,args0)
+        return {'c':ret[0],'k':ret[1]}
 
 '''
 Cauchy distribution
@@ -1115,6 +1201,13 @@ class cauchy(Distribution):
         if(gmma<=0):
             raise InvalidInputError("gamma must be bigger than 0")
         return x0+gmma*math.tan(math.pi*(q-1/2))
+    @staticmethod
+    def mle(x):
+        args0=[1,1]
+        n=len(x)
+        func = lambda x,n,args_: -n*math.log(math.pi)-n*math.log(args_[0])-np.sum(np.log(np.power((np.array(x)-args_[1])/args_[0],2)+1))
+        ret=op.basinhopping(func,args0)
+        return {'gamma':ret[0],'x0':ret[1]}
 
 '''
 Chi distribution
@@ -1361,13 +1454,13 @@ class doubleweibull(Distribution):
     @staticmethod
     def pdf(a,b,c,x):
         z=(x-a)/b
-        return c/2*math.pow(math.abs(z),c-1)*math.exp(-math.pow(math.abs(z),c))
+        return c/2*math.pow(abs(z),c-1)*math.exp(-math.pow(abs(z),c))
     @staticmethod
     def cdf(a,b,c,x):
         z=(x-a)/b
         if(z<=0):
-            return 1/2*math.exp(-math.pow(math.abs(z),c))
-        return 1-1/2*math.exp(-math.pow(math.abs(z),c))
+            return 1/2*math.exp(-math.pow(abs(z),c))
+        return 1-1/2*math.exp(-math.pow(abs(z),c))
     @staticmethod
     def median(a,b,c):
         return a
@@ -1702,6 +1795,14 @@ class expkumaraswamyinvweibull(Distribution):
     @staticmethod
     def ppf(a,b,e,l,t,q):
         return a/math.pow(-math.log(math.pow(1-math.pow(1-math.pow(q,1/t),1/e),1/l)),1/b)
+    @staticmethod
+    def mle(x):
+        #args_ -a,b,l,e,t
+        n=size(x)
+        args0=[1,1,1,1,1]
+        func= lambda args_,x,n: n*math.log(args_[1])+n*math.log(args_[3])+n*math.log(args_[4])+n*math.log(args_[3])+n*args_[1]*math.log(args_[0])-(args_[1]+1)*np.sum(np.log(np.array(x)))-args_[2]*np.sum(np.power(args_[0]/x,args_[1]))+(args_[3]-1)*np.sum(np.log(1-np.exp(-args_[2]*np.power(args_[0]/x,args_[1]))))+(args_[4]-1)*np.sum(np.log(1-np.power(1-np.exp(-args_[2]*np.power(args_[0]/x,args_[1])),args_[3])))
+        ret=op.basinhopping(func, x0)
+        return {'a':ret[0],'b':ret[1],'e':ret[3],'l':ret[2],'t':ret[4]}
 
 '''
 Exponential-logistic distribution
@@ -2456,15 +2557,15 @@ class foldednormal(Distribution):
         return abs(normal.random(m,s))
     @staticmethod
     def pdf(m,s,x):
-        c=math.abs(m)/s
+        c=abs(m)/s
         return math.sqrt(2/math.pi)*math.cosh(c*x)*math.exp(-(x**2+c**2)/2)
     @staticmethod
     def cdf(m,s,x):
-        c=math.abs(m)/s
+        c=abs(m)/s
         return st.norm.cdf(x-c)-st.norm.cdf(-x-c)
     @staticmethod
     def mean(m,s):
-        c=math.abs(m)/s
+        c=abs(m)/s
         return math.sqrt(2/math.pi)*math.exp(-c**2/2)+c*math.erf(c/math.sqrt(2))
 
 '''
@@ -2624,6 +2725,14 @@ class genexp(Distribution): #generalized exponential
     @staticmethod
     def ppf(l,a,q):
         return -math.log(1-math.pow(q,1/a))/l
+    @staticmethod
+    def mle(x):
+        #args_ - (a,l)
+        args0=[1,1]
+        n=len(x)
+        func= lambda n,x,args_: n*args_[0]+n*args_[1]+(args_[0]-1)*np.sum(np.log(1-np.exp(-args_[1]*x)))-args_[1]*sum(x)
+        ret=op.basinhopping(func,args0)
+        return {'a':ret[0],'l':ret[1]}
 
 '''
 Generalized exponentiated Poisson distribution
@@ -2745,7 +2854,7 @@ class genextremevalue(Distribution):
             raise InvalidInputError("sigma must be positive")
         if(xi>=1/3):
             return float("infinity")
-        return (math.abs(xi)/xi)*(math.gamma(1-3*xi)-3*math.gamma(1-xi)*math.gamma(1-2*xi)+2*math.gamma(1-xi)**3)/math.pow(math.gamma(1-2*xi)-math.gamma(1-xi)**2,3/2)
+        return (abs(xi)/xi)*(math.gamma(1-3*xi)-3*math.gamma(1-xi)*math.gamma(1-2*xi)+2*math.gamma(1-xi)**3)/math.pow(math.gamma(1-2*xi)-math.gamma(1-xi)**2,3/2)
     @staticmethod
     def ppf(mu,sigma,xi,q):
         if(xi==0):
@@ -3210,6 +3319,9 @@ class geometric(Distribution):
         if(p<=0 or p>1):
             raise InvalidInputError("p must be greater than zero and less than or equal to 1")
         return math.floor(math.log(q)/math.log(1-p))
+    @staticmethod
+    def mle(x):
+        return {'p':n/sum(x)}
 
 '''
 Geometric extreme exponential distribution*
@@ -4137,7 +4249,14 @@ class kumaraswamyhalfcauchy(Distribution):
     @staticmethod
     def ppf(a,b,d,q):
         return d*math.tan(math.pi/2*math.pow(1-math.pow(1-q,1/b),1/a))
-
+    @staticmethod
+    def mle(x):
+        #args_ - (a,b,d)
+        args0=[1,1,1]
+        n=len(x)
+        func = lambda n,x,args_: n*math.log(args_[0]*args_[1])+n*args_[0]*math.log(2/math.pi)-n*math.log(args_[2])+(args_[1]-1)*np.sum(np.power(1-np.power(2/math.pi*np.atan(x/args_[2]),args_[1]),-1))+(args_[0]-1)*np.sum(np.atan(x/args_[2]))-np.sum(np.power(np.log(1+np.power(x/args_[2],2)),-1))
+        det=op.basinhopping(func,args0)
+        return {'a':det[0],'b':det[1],'d':det[2]}
 '''
 Kumaraswamy inverse exponential distribution
 '''
@@ -4295,7 +4414,7 @@ class laplace(Distribution):
     def pdf(mu,b,x):
         if(b<=0):
             raise InvalidInputError("b must be positive")
-        return 1/(2*b)*math.exp(-math.abs(x-mu)/b)
+        return 1/(2*b)*math.exp(-abs(x-mu)/b)
     @staticmethod
     def cdf(mu,b,x):
         if(b<=0):
@@ -4308,7 +4427,7 @@ class laplace(Distribution):
         if(b<=0):
             raise InvalidInputError("b must be positive")
         u=r.random()
-        return mu-b*(math.abs(u-0.5)/(u-0.5))*math.log(1-2*math.abs(u-0.5))
+        return mu-b*(abs(u-0.5)/(u-0.5))*math.log(1-2*abs(u-0.5))
     @staticmethod
     def kurtosis(mu,b):
         if(b<=0):
@@ -4353,7 +4472,7 @@ class laplace(Distribution):
     def ppf(mu,b,q):
         if(b<=0):
             raise InvalidInputError("b must be positive")
-        return mu-b*(math.abs(q-0.5)/(q-0.5))*math.log(1-2*math.abs(q-0.5))
+        return mu-b*(abs(q-0.5)/(q-0.5))*math.log(1-2*abs(q-0.5))
     @staticmethod
     def mle(x):
         mu=np.median(x)
@@ -4382,7 +4501,7 @@ class levy(Distribution):
     def random(mu,c):
         if(c<=0):
             raise InvalidInputError("c must be positive")
-        return c/math.pow(math.abs(st.norm.ppf(1-rg0()/2)),2)+mu
+        return c/math.pow(abs(st.norm.ppf(1-rg0()/2)),2)+mu
     @staticmethod
     def kurtosis(mu,c):
         if(c<=0):
@@ -4417,7 +4536,7 @@ class levy(Distribution):
     def ppf(mu,c):
         if(c<=0):
             raise InvalidInputError("c must be positive")
-        return c/math.pow(math.abs(st.norm.ppf(1-q/2)),2)+mu
+        return c/math.pow(abs(st.norm.ppf(1-q/2)),2)+mu
 
 '''
 Levy-l distribution
@@ -4735,11 +4854,11 @@ class loglaplace(Distribution):
         return math.exp(laplace.random(mu,b))
     @staticmethod
     def pdf(mu,b,x):
-        return 1/(2*b*x)*math.exp(-math.abs(math.log(x)-mu)/b)
+        return 1/(2*b*x)*math.exp(-abs(math.log(x)-mu)/b)
     @staticmethod
     def cdf(mu,b,x):
         if(x>0):
-            return (1+(1-math.exp(-math.abs(math.log(x)-mu)/b))*(math.abs(math.log(x)-mu)/(math.log(x)-mu)))
+            return (1+(1-math.exp(-abs(math.log(x)-mu)/b))*(abs(math.log(x)-mu)/(math.log(x)-mu)))
 
 '''
 Log-logistic distribution
@@ -4819,6 +4938,11 @@ class lognormal(Distribution):
     @staticmethod
     def skewness(mu,sigma):
         return (math.exp(sigma**2)+2)*math.sqrt(math.exp(sigma**2)-1)
+    @staticmethod
+    def mle(x):
+        params={'mu':np.sum(np.log(np.array(x)))/len(x)}
+        params['sigma2']=np.sum(np.power(np.log(np.array(x))-params['mu'],2))
+        return params
 
 '''
 Log-triangular distribution
@@ -4929,6 +5053,44 @@ class lomax(Distribution):
         return lmbda*(math.pow(1/(1-q),1/aa)-1)
 
 '''
+Marshall-Olkin Esscher transformed Laplace distribution
+'''
+class marshallolkinesschertransformedlaplace(Distribution):
+    @staticmethod
+    def random(b,t):
+        w=exp.random(1/b)
+        return 2*t/(1-t**2)*w+math.sqrt(2/(1-t**2))*math.sqrt(w)*normal.random(0,1)
+    @staticmethod
+    def pdf(b,t,x):
+        l=math.sqrt(b*(1-t**2))
+        k=l/(t+math.sqrt(l+t**2))
+        if(x<0):
+            return l*k/(1+k**2)*math.exp(l*x/k)
+        return l*k/(1+k**2)*math.exp(-l*k*x)
+    @staticmethod
+    def cdf(b,t,x):
+        l=math.sqrt(b*(1-t**2))
+        k=l/(t+math.sqrt(l+t**2))
+        if(x<0):
+            return k**2/(1+k**2)*math.exp(l*x/k)
+        return 1-1/(1+k**2)*math.exp(-l*k*x)
+    @staticmethod
+    def mean(b,t):
+        l=math.sqrt(b*(1-t**2))
+        k=l/(t+math.sqrt(l+t**2))
+        return (1-k**2)/(l*k)
+    @staticmethod
+    def variance(b,t):
+        l=math.sqrt(b*(1-t**2))
+        k=l/(t+math.sqrt(l+t**2))
+        return (1+k**4)/(l**2*k**2)
+    @staticmethod
+    def stddev(b,t):
+        l=math.sqrt(b*(1-t**2))
+        k=l/(t+math.sqrt(l+t**2))
+        return math.sqrt((1+k**4)/(l*k))
+
+'''
 Maxwell-Boltzmann distribution
 '''
 class maxwellboltzmann(Distribution):
@@ -4989,44 +5151,6 @@ class maxwellboltzmann(Distribution):
         if(aa<=0):
             raise InvalidInputError("aa must be positive")
         return 2*math.sqrt(2)*(16-5*math.pi)/math.pow(3*math.pi-8,3/2)
-
-'''
-Marshall-Olkin Esscher transformed Laplace distribution
-'''
-class marshallolkinesschertransformedlaplace(Distribution):
-    @staticmethod
-    def random(b,t):
-        w=exp.random(1/b)
-        return 2*t/(1-t**2)*w+math.sqrt(2/(1-t**2))*math.sqrt(w)*normal.random(0,1)
-    @staticmethod
-    def pdf(b,t,x):
-        l=math.sqrt(b*(1-t**2))
-        k=l/(t+math.sqrt(l+t**2))
-        if(x<0):
-            return l*k/(1+k**2)*math.exp(l*x/k)
-        return l*k/(1+k**2)*math.exp(-l*k*x)
-    @staticmethod
-    def cdf(b,t,x):
-        l=math.sqrt(b*(1-t**2))
-        k=l/(t+math.sqrt(l+t**2))
-        if(x<0):
-            return k**2/(1+k**2)*math.exp(l*x/k)
-        return 1-1/(1+k**2)*math.exp(-l*k*x)
-    @staticmethod
-    def mean(b,t):
-        l=math.sqrt(b*(1-t**2))
-        k=l/(t+math.sqrt(l+t**2))
-        return (1-k**2)/(l*k)
-    @staticmethod
-    def variance(b,t):
-        l=math.sqrt(b*(1-t**2))
-        k=l/(t+math.sqrt(l+t**2))
-        return (1+k**4)/(l**2*k**2)
-    @staticmethod
-    def stddev(b,t):
-        l=math.sqrt(b*(1-t**2))
-        k=l/(t+math.sqrt(l+t**2))
-        return math.sqrt((1+k**4)/(l*k))
 
 '''
 McDonald log-logistic distribution
@@ -5608,79 +5732,85 @@ Pareto distribution
 '''
 class pareto(Distribution):
     @staticmethod
-    def pdf(alpha,xm,x):
+    def pdf(aa,xm,x):
         if(alpha<=0 or xm<=0):
             raise InvalidInputError("alpha and xm must be positive")
         if(x<xm):
             raise InvalidInputError("x must be greater than or equal to xm")
         return alpha*math.pow(xm,alpha)/math.pow(x,alpha+1)
     @staticmethod
-    def cdf(alpha,xm,x):
+    def cdf(aa,xm,x):
         if(alpha<=0 or xm<=0):
             raise InvalidInputError("alpha and xm must be positive")
         if(x<xm):
             raise InvalidInputError("x must be greater than or equal to xm")
         return 1-math.pow(xm/x,alpha)
     @staticmethod
-    def random(alpha,xm):
+    def random(aa,xm):
         if(alpha<=0 or xm<=0):
             raise InvalidInputError("alpha and xm must be positive")
         return xm/math.pow(rg0(),1/alpha)
     @staticmethod
-    def kurtosis(alpha,xm):
+    def kurtosis(aa,xm):
         if(alpha<=0 or xm<=0):
             raise InvalidInputError("alpha and xm must be positive")
         if(alpha>4):
             return 6*(alpha**3+alpha**2-6*alpha-2)/(alpha*(alpha-3)*(alpha-4))
         return None
     @staticmethod
-    def mean(alpha,xm):
+    def mean(aa,xm):
         if(alpha<=0 or xm<=0):
             raise InvalidInputError("alpha and xm must be positive")
         if(alpha<=1):
             return float("infinity")
         return alpha*xm/(alpha-1)
     @staticmethod
-    def median(alpha,xm):
+    def median(aa,xm):
         if(alpha<=0 or xm<=0):
             raise InvalidInputError("alpha and xm must be positive")
         return xm*math.pow(2,1/alpha)
     @staticmethod
-    def mode(alpha,xm):
+    def mode(aa,xm):
         if(alpha<=0 or xm<=0):
             raise InvalidInputError("alpha and xm must be positive")
         return xm
     @staticmethod
-    def variance(alpha,xm):
+    def variance(aa,xm):
         if(alpha<=0 or xm<=0):
             raise InvalidInputError("alpha and xm must be positive")
         if(alpha<=2):
             return float("infinity")
         return (xm**2)*alpha/((alpha-1)**2*(alpha-2))
     @staticmethod
-    def stddev(alpha,xm):
+    def stddev(aa,xm):
         if(alpha<=0 or xm<=0):
             raise InvalidInputError("alpha and xm must be positive")
         if(alpha<=2):
             return float("infinity")
         return xm*math.sqrt(alpha/(alpha-2))/(alpha-1)
     @staticmethod
-    def entropy(alpha,xm):
+    def entropy(aa,xm):
         if(alpha<=0 or xm<=0):
             raise InvalidInputError("alpha and xm must be positive")
         return math.log((xm/alpha)*math.exp(1+1/alpha))
     @staticmethod
-    def skewness(alpha,xm):
+    def skewness(aa,xm):
         if(alpha<=0 or xm<=0):
             raise InvalidInputError("alpha and xm must be positive")
         if(alpha>3):
             return 2*(1+alpha)/(alpha-3)*math.sqrt((alpha-2)/alpha)
         return None
     @staticmethod
-    def ppf(alpha,xm,q):
+    def ppf(aa,xm,q):
         if(alpha<=0 or xm<=0):
             raise InvalidInputError("alpha and xm must be positive")
         return xm/math.pow(q,1/alpha)
+    @staticmethod
+    def mle(x):
+        params={}
+        params['xm']=min(x)
+        params['aa']=n/np.sum(np.log(x)-math.log(params['xm']))
+        return params
 
 '''
 Pareto II variant (Shifted Pareto) distribution
@@ -5831,6 +5961,9 @@ class poisson(Distribution):
         if(lmbda<=0):
             raise InvalidInputError("lambda must be positive")
         return math.sqrt(1/lmbda)
+    @staticmethod
+    def mle(x):
+        return {'lambda':sum(x)/len(x)}
 
 '''
 Poisson exponential distribution
@@ -5852,6 +5985,14 @@ class poissonexp(Distribution): #poisson exponential
     @staticmethod
     def ppf(l,t,q):
         return -math.log(-math.log(1-(1-math.exp(-t))*q)/t)/l
+    @staticmethod
+    def mle(x):
+        #args_ - [l,t]
+        args0=[1,1]
+        n=len(x)
+        func = lambda args_,x,n: n*math.log(args_[1]*args_[0])-args_[0]*sum(x)-args_[1]*np.sum(np.exp(-args_[0]*x))-n*math.log(1-math.exp(-args_[1]))
+        ret=op.basinhopping(func,args0)
+        return {'l':ret[0],'t':ret[1]}
 
 '''
 Polya distribution*
@@ -6032,14 +6173,14 @@ class raisedcosine(Distribution):
     def pdf(mu,s,x):
         if(s<=0):
             raise InvalidInputError("s must be positive")
-        if(math.abs(x-mu)>s):
+        if(abs(x-mu)>s):
             raise InvalidInputError("x must be between mu-s and mu+s")
         return 1/(2*s)*(1+math.cos((x-mu)/s*math.pi))
     @staticmethod
     def cdf(mu,s,x):
         if(s<=0):
             raise InvalidInputError("s must be positive")
-        if(math.abs(x-mu)>s):
+        if(abs(x-mu)>s):
             raise InvalidInputError("x must be between mu-s and mu+s")
         return 1/2*(1+(x-mu)/s+1/math.pi*math.sin((x-mu)/s*math.pi))
     @staticmethod
@@ -6142,6 +6283,11 @@ class rayleigh(Distribution):
         if(sigma<=0):
             raise InvalidInputError("sigma must be positive")
         return sigma*math.sqrt(-2*math.log(q))
+    @staticmethod
+    def mle(x):
+        s2=np.sum(np.power(x,2))/(2*len(x))
+        n=len(x)
+        return math.sqrt(s2)*math.pow(4,n)*math.factorial(n)*math.factorial(n-1)*math.sqrt(n)/(math.factorial(2*n)*math.sqrt(math.pi))
 
 '''
 R distribution
@@ -7057,6 +7203,9 @@ class uniform(Distribution):
         if(b<=a):
             raise InvalidInputError("b must be greater than a")
         return ((b-a)*q+a)
+    @staticmethod
+    def mle(x):
+        return {'a':min(x),'b':max(x)}
 
 '''
 Uniform product distribution*
@@ -7470,3 +7619,19 @@ class zipf(Distribution):
     @staticmethod
     def random(a):
         return st.zipf.rvs(a)
+
+#print(-(np.sum(1*(1-np.power(np.array((1,3)),1))/1)+(1-1)*np.sum(np.log((1,3)))-2*math.log(1)+2*math.log(1)+1*np.sum(np.log((1,3)))))
+
+print(amoroso.mle((1,3,9,2,15,239)))
+
+#x=(1,3,5,9)
+#args0=[2,2]
+#n=len(x)
+#print(-(np.sum(2*(1-np.power(np.array(x),2))/2)))
+#print (2-1)*np.sum(np.log(x))
+#print n*math.log(2)+n*math.log(2)+2*np.sum(np.log(x))
+#func = lambda args_: -(np.sum(args_[0]*(1-np.power(np.array(x),args_[1]))/args_[1])+(args_[1]-1)*np.sum(np.log(x))-n*math.log(args_[1])+n*math.log(args_[0])+args_[1]*np.sum(np.log(x)))
+#ret=op.differential_evolution(func,[(1e-12,100),(1e-12,100)])
+#print(ret.x)
+
+
