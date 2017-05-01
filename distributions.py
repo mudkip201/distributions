@@ -34,7 +34,7 @@ class Distribution:
         raise NotImplementedError("Should have implemented median function.")
     @staticmethod
     def mode():
-        raise NotImplementedError("Should have implemented median function.")
+        raise NotImplementedError("Should have implemented mode function.")
     @staticmethod
     def variance():
         raise NotImplementedError("Should have implemented variance function.")
@@ -53,7 +53,9 @@ class Distribution:
     @staticmethod
     def ppf():
         raise NotImplementedError("Should have implemented ppf function.")
-
+    @staticmethod
+    def mle():
+        raise NotImplementedError("Should have implemented mle function.")
 
 def qexp(x,q): #q-exponential
     if(q!=0):
@@ -101,6 +103,7 @@ def dice(numdice=1,sides=6,expllow=0,explhigh=0,ahigh=0,alow=0):
     return sum_
 
 
+
 '''
 Alpha distribution
 '''
@@ -120,9 +123,19 @@ class alpha(Distribution):
         n=rg0()
         return 1/(aa-st.norm.ppf(st.norm.cdf(aa)/2))
     @staticmethod
-    def ppf(aa):
+    def ppf(aa,q):
         n=rg0()
         return 1/(aa-st.norm.ppf(q*st.norm.cdf(aa)))
+    @staticmethod
+    def mle(x):
+        args0=[2.0]
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=alpha.pdf(args_[0],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1),method='Nelder-Mead').x.tolist()
+        return {'aa':ret[0]}
 
 '''
 Amoroso distribution
@@ -130,17 +143,14 @@ Amoroso distribution
 class amoroso(Distribution):
     @staticmethod
     def random(a,theta,aa,bb):
-        if(theta>0 and x<a):
-            raise InvalidInputError("x must be greater than a")
-        if(theta<0 and x>a):
-            raise InvalidInputError("x must be less than a")
         return a+theta*math.pow(gamma.random(aa,1),1/bb)
     @staticmethod
-    def pdf(a,theta,aa,bb):
+    def pdf(a,theta,aa,bb,x):
+        #print(a,theta,aa,bb,x)
         if(theta>0 and x<a):
-            raise InvalidInputError("x must be greater than a")
+            raise ValueError("x must be greater than a")
         if(theta<0 and x>a):
-            raise InvalidInputError("x must be less than a")
+            raise ValueError("x must be less than a")
         return 1/math.gamma(aa)*abs(bb/theta)*math.pow((x-a)/theta,aa*bb-1)*math.exp(-math.pow((x-a)/theta,bb))
     @staticmethod
     def mean(a,theta,aa,bb):
@@ -164,13 +174,21 @@ class amoroso(Distribution):
             return theta*math.sqrt(math.gamma(aa+2/bb)/math.gamma(aa)-(math.gamma(aa+1/bb)/math.gamma(aa))**2)
         return None
     @staticmethod
-    def mle(x): #not working?
-        args0=[1.0,1.0,1.0,1.0]
+    def mle(x): #not working
+        args0=[2.0,1.0,1.0,1.0]
         n=len(x)
-        func = lambda args_ : -(-n*math.log(math.gamma(args_[2]))+n*math.log(abs(args_[3]/args_[1]))+n*(args_[2]*args_[3]-1)*np.sum(np.log(x)-math.log(args_[2])-math.log(args_[1]))+np.sum(np.power((np.array(x)-args_[2])/args_[1],args_[3])))
-        ret=op.differential_evolution(func,[(0.01,100),(0.01,100),(0.01,min(x)),(0.01,10)]).x.tolist()
-        #ret=op.basinhopping(func,args0)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=amoroso.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.differential_evolution(mlefunc,[(0.01,min(x)-0.001),(0.01,100),(0.01,min(x)),(0.01,1)]).x.tolist()
         return {'a':ret[0],'theta':ret[1],'aa':ret[2],'bb':ret[3]}
+
+#x=[amoroso.random(1,1,1,1) for i in range(250)]
+#print(x)
+#print "{1,1,1,1}"
+#print(amoroso.mle(x))
 
 '''
 Anglit distribution
@@ -200,12 +218,12 @@ class arcsin(Distribution):
     @staticmethod
     def pdf(x):
         if(x<0 or x>1):
-            raise InvalidInputError("Must be between 0 and 1")
+            raise ValueError("Must be between 0 and 1")
         return 1/(math.pi*math.sqrt(x*(1-x)))
     @staticmethod
     def cdf(x):
         if(x<0 or x>1):
-            raise InvalidInputError("Must be between 0 and 1")
+            raise ValueError("Must be between 0 and 1")
         return math.asin(2*x-1)/math.pi+1/2
     @staticmethod
     def random():
@@ -232,43 +250,56 @@ Arctan distribution
 class arctan(Distribution):
     @staticmethod
     def pdf(lmbda,phi,x):
-        if(lmbda<0):
-            raise InvalidInputError("Must be between 0 and 1")
+        if(lmbda<0 or lmbda>1):
+            raise ValueError("lambda must be between 0 and 1")
         return lmbda/((math.atan(lmbda*phi)+1/(2*math.pi))*(1+lmbda**2*((x-phi)**2)))
     @staticmethod
     def cdf(lmbda,phi,x):
         if(lmbda<0):
-            raise InvalidInputError("Must be between 0 and 1")
+            raise ValueError("Must be between 0 and 1")
         return 2*((math.atan(lmbda*phi)-math.atan(-x*lmbda+lmbda*phi))/(2*math.atan(lmbda*phi)+math.pi))
     @staticmethod
     def random(lmbda,phi):
         if(lmbda<0):
-            raise InvalidInputError("Must be between 0 and 1")
+            raise ValueError("Must be between 0 and 1")
         n=r.random()
         return (lmbda*phi+math.tan(-math.atan(lmbda*phi)+n*math.atan(lmbda*phi)+n*math.pi/2))/lmbda
     @staticmethod
     def kurtosis(lmbda,phi):
         if(lmbda<0):
-            raise InvalidInputError("Must be between 0 and 1")
+            raise ValueError("Must be between 0 and 1")
         return None
     @staticmethod
     def mean(lmbda,phi):
         if(lmbda<0):
-            raise InvalidInputError("Must be between 0 and 1")
+            raise ValueError("Must be between 0 and 1")
         return None
     @staticmethod
     def variance(lmbda,phi):
         if(lmbda<0):
-            raise InvalidInputError("Must be between 0 and 1")
+            raise ValueError("Must be between 0 and 1")
         return float("infinity")
     @staticmethod
     def stddev(lmbda,phi):
         if(lmbda<0):
-            raise InvalidInputError("Must be between 0 and 1")
+            raise ValueError("Must be between 0 and 1")
         return float("infinity")
     @staticmethod
     def ppf(lmbda,phi,q):
         return (lmbda*phi+math.tan(-math.atan(lmbda*phi)+q*math.atan(lmbda*phi)+q*math.pi/2))/lmbda
+    @staticmethod
+    def mle(x): #not working
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=arctan.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='L-BFGS-B',bounds=[(0,1),(-10000,10000)]).x.tolist()
+        return {'lambda':ret[0],'phi':ret[1]}
+
+#x=[arctan.random(2,2) for i in range(100)]
+#print "{2,2}"
+#print(arctan.mle(x))
 
 '''
 Asymmetric Laplace distribution
@@ -277,64 +308,80 @@ class asymlaplace(Distribution): #asymmetric laplace
     @staticmethod
     def pdf(m,lmbda,kppa,x):
         if(kppa<=0 or lmbda<=0):
-            raise InvalidInputError("kppa and lambda must be greater than 0")
+            raise ValueError("kppa and lambda must be greater than 0")
         if(x>=m):
             return lmbda/(kppa+1/kppa)*math.exp(-lmbda*kppa*(x-m))
         return lmbda/(kppa+1/kppa)*math.exp((lmbda/kppa)*(x-m))
     @staticmethod
     def cdf(m,lmbda,kppa,x):
         if(kppa<=0 or lmbda<=0):
-            raise InvalidInputError("kppa and lambda must be greater than 0")
+            raise ValueError("kppa and lambda must be greater than 0")
         if(x>m):
-            return 1-1/(1+kppa**2)*math.pow(-lmbda*kppa*(x-m))
-        return kppa**2/(1+kppa**2)*math.pow(lmbda/kppa*(x-m))
+            return 1-1/(1+kppa**2)*math.exp(-lmbda*kppa*(x-m))
+        return kppa**2/(1+kppa**2)*math.exp(lmbda/kppa*(x-m))
     @staticmethod
     def random(m,lmbda,kppa):
         if(kppa<=0 or lmbda<=0):
-            raise InvalidInputError("kppa and lambda must be greater than 0")
+            raise ValueError("kppa and lambda must be greater than 0")
         n=rg0()
-        while(n==1):
-            n=rg0()
-        if(n<=(math.pow(k,2))/(1+math.pow(k,2))):
-            return k/math.sqrt(2)*math.log((1+math.pow(k,2))/math.pow(k,2) * n)
-        return 1/(k*math.sqrt(2))*math.log((1+math.pow(k,2))*(1-n))
+        n=n*(1/kppa+kppa)-kppa
+        s=abs(n)/n
+        return m-1/(lmbda*s*math.pow(kppa,s))*math.log(n*s*math.pow(kppa,s))
     @staticmethod
     def mean(m,lmbda,kppa):
         if(kppa<=0 or lmbda<=0):
-            raise InvalidInputError("kppa and lambda must be greater than 0")
+            raise ValueError("kppa and lambda must be greater than 0")
         return m+(1-kppa**2)/(lmbda*kppa)
     @staticmethod
     def median(m,lmbda,kppa):
         if(kppa<=0 or lmbda<=0):
-            raise InvalidInputError("kppa and lambda must be greater than 0")
+            raise ValueError("kppa and lambda must be greater than 0")
         return m+(kppa/lmbda)*math.log((1+kppa**2)/(2*kppa**2))
     @staticmethod
     def variance(m,lmbda,kppa):
         if(kppa<=0 or lmbda<=0):
-            raise InvalidInputError("kppa and lambda must be greater than 0")
+            raise ValueError("kppa and lambda must be greater than 0")
         return (1+math.pow(kppa,4))/(lmbda**2*kppa**2)
     @staticmethod
     def stddev(m,lmbda,kppa):
         if(kppa<=0 or lmbda<=0):
-            raise InvalidInputError("kppa and lambda must be greater than 0")
+            raise ValueError("kppa and lambda must be greater than 0")
         return math.sqrt((1+math.pow(kppa,4))/(lmbda**2*kppa**2))
     @staticmethod
     def skewness(m,lmbda,kppa):
         if(kppa<=0 or lmbda<=0):
-            raise InvalidInputError("kppa and lambda must be greater than 0")
+            raise ValueError("kppa and lambda must be greater than 0")
         return 2*(1-math.pow(kppa,6))/(math.pow(math.pow(kppa,4)+1,3/2))
     @staticmethod
     def entropy(m,lmbda,kppa):
         if(kppa<=0 or lmbda<=0):
-            raise InvalidInputError("kppa and lambda must be greater than 0")
+            raise ValueError("kppa and lambda must be greater than 0")
         return math.log(math.exp(1)*(1+kppa**2)/(kppa*lmbda))
     @staticmethod
-    def ppf(m,lmbda,kppa,q):
+    def ppf(m,lmbda,kppa,q): #not working
         if(kppa<=0 or lmbda<=0):
-            raise InvalidInputError("kppa and lambda must be greater than 0")
+            raise ValueError("kppa and lambda must be greater than 0")
         if(q<=(math.pow(k,2))/(1+math.pow(k,2))):
             return k/math.sqrt(2)*math.log((1+math.pow(k,2))/math.pow(k,2)*q)
         return 1/(k*math.sqrt(2))*math.log((1+math.pow(k,2))*(1-q))
+    @staticmethod
+    def mle(x):
+        args0=[2.0,2.0,2.0]
+        n=len(x)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=asymlaplace.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(0,1,1),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(-10,10),(0.001,10),(0.001,10)]).x.tolist()
+        return {'m':ret[0],'lambda':ret[1],'kappa':ret[2]}
+
+#print("Asymmetric Laplace distribution")
+#x=[asymlaplace.random(1,1,1) for i in range(100)]
+#print "{1,1,1}"
+#print(asymlaplace.mle(x))
+
 
 '''
 Balding-Nichols distribution
@@ -342,34 +389,34 @@ Balding-Nichols distribution
 class baldingnichols(Distribution):
     @staticmethod
     def random(f,p):
-        if(F<=0 or F>=1 or p<=0 or p>=1):
-            raise InvalidInputError("all inputs must be between 0 and 1 exclusive")
+        if(f<=0 or f>=1 or p<=0 or p>=1):
+            raise ValueError("all inputs must be between 0 and 1 exclusive")
         return beta.random(p*(1-f)/f,(1-p)*(1-f)/f)
     @staticmethod
     def mean(f,p):
-        if(F<=0 or F>=1 or p<=0 or p>=1):
-            raise InvalidInputError("all inputs must be between 0 and 1 exclusive")
+        if(f<=0 or f>=1 or p<=0 or p>=1):
+            raise ValueError("all inputs must be between 0 and 1 exclusive")
         return p
     @staticmethod
     def mode(f,p):
-        if(F<=0 or F>=1 or p<=0 or p>=1):
-            raise InvalidInputError("all inputs must be between 0 and 1 exclusive")
-        return (F-(1-F)*p)/(3*F-1)
+        if(f<=0 or f>=1 or p<=0 or p>=1):
+            raise ValueError("all inputs must be between 0 and 1 exclusive")
+        return (f-(1-f)*p)/(3*f-1)
     @staticmethod
     def variance(f,p):
-        if(F<=0 or F>=1 or p<=0 or p>=1):
-            raise InvalidInputError("all inputs must be between 0 and 1 exclusive")
-        return F*p*(1-p)
+        if(f<=0 or f>=1 or p<=0 or p>=1):
+            raise ValueError("all inputs must be between 0 and 1 exclusive")
+        return f*p*(1-p)
     @staticmethod
     def stddev(f,p):
-        if(F<=0 or F>=1 or p<=0 or p>=1):
-            raise InvalidInputError("all inputs must be between 0 and 1 exclusive")
-        return math.sqrt(F*p*(1-p))
+        if(f<=0 or f>=1 or p<=0 or p>=1):
+            raise ValueError("all inputs must be between 0 and 1 exclusive")
+        return math.sqrt(f*p*(1-p))
     @staticmethod
     def skewness(f,p):
-        if(F<=0 or F>=1 or p<=0 or p>=1):
-            raise InvalidInputError("all inputs must be between 0 and 1 exclusive")
-        return 2*F*(1-2*p)/((1+F)*math.sqrt(F*(1-p)*p))
+        if(f<=0 or f>=1 or p<=0 or p>=1):
+            raise ValueError("all inputs must be between 0 and 1 exclusive")
+        return 2*f*(1-2*p)/((1+f)*math.sqrt(f*(1-p)*p))
 
 '''
 Banach distribution*
@@ -381,7 +428,7 @@ class banach(Distribution):
         sum_=0
         counter=0
         while(sum_<n):
-            sum_+=math.pow(2,x-2*n)*(math.factorial(2*n-x)/(math.factorial(n)*math.factorial(n-x)))
+            sum_+=math.pow(2,x-2*n)*(math.gamma(2*n-x+1)/(math.gamma(n+1)*math.gamma(n-x+1)))
             counter+=1
         return counter
 
@@ -400,7 +447,7 @@ class bates(Distribution):
     @staticmethod
     def random(n):
         if(n%1!=0 or n<1):
-            raise InvalidInputError("n must be a positive integer greater than 0")
+            raise ValueError("n must be a positive integer greater than 0")
         avg=0
         for _ in range(n):
             avg+=r.random()
@@ -408,27 +455,27 @@ class bates(Distribution):
     @staticmethod
     def kurtosis(n):
         if(n%1!=0 or n<1):
-            raise InvalidInputError("n must be a positive integer greater than 0")
+            raise ValueError("n must be a positive integer greater than 0")
         return -6/(5*n)
     @staticmethod
     def mean(n):
         if(n%1!=0 or n<1):
-            raise InvalidInputError("n must be a positive integer greater than 0")
+            raise ValueError("n must be a positive integer greater than 0")
         return 1/2
     @staticmethod
     def variance(n):
         if(n%1!=0 or n<1):
-            raise InvalidInputError("n must be a positive integer greater than 0")
+            raise ValueError("n must be a positive integer greater than 0")
         return 1/(12*n)
     @staticmethod
     def stddev(n):
         if(n%1!=0 or n<1):
-            raise InvalidInputError("n must be a positive integer greater than 0")
+            raise ValueError("n must be a positive integer greater than 0")
         return math.sqrt(1/(12*n))
     @staticmethod
     def skewness(n):
         if(n%1!=0 or n<1):
-            raise InvalidInputError("n must be a positive integer greater than 0")
+            raise ValueError("n must be a positive integer greater than 0")
         return 0
 
 '''
@@ -452,20 +499,37 @@ Benini distribution
 '''
 class benini(Distribution):
     @staticmethod
-    def pdf(aa,bb,sigma):
+    def pdf(aa,bb,sigma,x):
         if(aa<=0 or bb<=0 or sigma<=0 or x<=sigma):
-            raise InvalidInputError("aa, bb, and gamma must be greater than 0")
+            raise ValueError("aa, bb, and sigma must be greater than 0, and x must be greater than sigma")
         return math.exp(-aa*math.log(x/sigma)-bb*(math.log(x/sigma))**2)*(aa/x+2*bb*math.log(x/sigma)/x)
     @staticmethod
-    def cdf(aa,bb,sigma):
+    def cdf(aa,bb,sigma,x):
         if(aa<=0 or bb<=0 or sigma<=0 or x<=sigma):
-            raise InvalidInputError("aa, bb, and gamma must be greater than 0")
+            raise ValueError("aa, bb, and sigma must be greater than 0, and x must be greater than sigma")
         return 1-math.exp(-aa*math.log(x/sigma)-bb*(math.log(x/sigma))**2)
     @staticmethod
     def median(aa,bb,sigma):
-        if(aa<=0 or bb<=0 or sigma<=0 or x<=sigma):
-            raise InvalidInputError("aa, bb, and gamma must be greater than 0")
+        if(aa<=0 or bb<=0 or sigma<=0):
+            raise ValueError("aa, bb, and sigma must be greater than 0, and x must be greater than sigma")
         return sigma*math.exp((-aa+math.sqrt(aa**2+bb*math.log(16)))/(2*bb))
+    @staticmethod
+    def mle(x):
+        args0=[2.0,2.0,2.0]
+        n=len(x)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=benini.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='SLSQP',bounds=[(0,None),(0,None),(0,min(x))]).x.tolist()
+        return {'aa':ret[0],'bb':ret[1],'sigma':ret[2]}
+
+
+#x=[benini.random(1,1,1) for i in range(10)]
+#print "{1,1,1}"
+#print(benini.mle(x))
+
 
 '''
 Benktander Weibull distribution
@@ -474,80 +538,86 @@ class benktanderweibull(Distribution):
     @staticmethod
     def pdf(a,b,x):
         if(b<=0 or b>1 or x<1):
-            raise InvalidInputError("b must be greater than 0 and less than or equal to 1, and x must be greater than or equal to 1")
+            raise ValueError("b must be greater than 0 and less than or equal to 1, and x must be greater than or equal to 1")
         return math.exp(a*(1-math.pow(x,b))/b)*math.pow(x,b-1)*(1-b+a*math.pow(x,b))
     @staticmethod
     def cdf(a,b,x):
         if(b<=0 or b>1 or x<1):
-            raise InvalidInputError("b must be greater than 0 and less than or equal to 1, and x must be greater than or equal to 1")
+            raise ValueError("b must be greater than 0 and less than or equal to 1, and x must be greater than or equal to 1")
         return 1-math.exp(a*(1-math.pow(x,b))/b)*math.pow(x,b-1)
-    @staticmethod
-    def random(a,b):
-        if(b<=0 or b>1):
-            raise InvalidInputError("b must be greater than 0 and less than or equal to 1")
-        n=r.random()
-        return math.pow((b-1)*sp.lambertw(-(a*math.exp(-a/(b+1))*math.pow(1-n,b/(b+1)))/(b-1))/a,1/b)
+    #@staticmethod
+        #def random(a,b): #something's wrong here
+        #if(b<=0 or b>1):
+        #   raise ValueError("b must be greater than 0 and less than or equal to 1")
+        #n=r.random()
+        #return math.pow((b-1)*sp.lambertw(-(a*math.exp(-a/(b+1))*math.pow(1-n,b/(b+1)))/(b-1))/a,1/b)
     @staticmethod
     def mean(a,b):
         if(b<=0 or b>1):
-            raise InvalidInputError("b must be greater than 0 and less than or equal to 1")
+            raise ValueError("b must be greater than 0 and less than or equal to 1")
         return 1+1/a
     @staticmethod
     def ppf(a,b,q):
         if(b<=0 or b>1):
-            raise InvalidInputError("b must be greater than 0 and less than or equal to 1")
+            raise ValueError("b must be greater than 0 and less than or equal to 1")
         return math.pow((b-1)*sp.lambertw(-(a*math.exp(-a/(b+1))*math.pow(1-q,b/(b+1)))/(b-1))/a,1/b)
     @staticmethod
-    def mle(x):
-        args0=[2.0,2.0]
+    def mle(x): #doesn't work
+        args0=[2.0,0.5]
         n=len(x)
-        func = lambda args_: -(np.sum(args_[0]*(1-np.power(np.array(x),args_[1]))/args_[1])+(args_[1]-1)*np.sum(np.log(x))-n*math.log(args_[1])+n*math.log(args_[0])+args_[1]*np.sum(np.log(x)))
-        #mybounds=myBounds((1,1))
-        #ret=op.basinhopping(func2,args0,callback=print_fun, accept_test=mybounds)
-        #print(ret)
-        ret=op.differential_evolution(func,[(0.00001,100),(0.0001,100)]).x.tolist()
-        #print(ret)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=benktanderweibull.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(0.5,0.3),method='TNC',bounds=[(0.1,10),(0.1,0.999)]).x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(0.1,10),(0.1,0.999)]).x.tolist()
         return {'a':ret[0],'b':ret[1]}
+
+#x=[benktanderweibull.random(1,0.5) for i in range(10)]
+#print(x)
+#print "{1,0.5}"
+#print(benktanderweibull.mle(x))
 
 '''
 Bernoulli distribution
 '''
 class bernoulli(Distribution):
     @staticmethod
-    def pdf(k,p):
+    def pdf(p,k):
         if((k!=0 and k!=1) or p<0 or p>1):
-            raise InvalidInputError("k must be 0 or 1, and p must be between 0 and 1 inclusive")
+            raise ValueError("k must be 0 or 1, and p must be between 0 and 1 inclusive")
         if(k==0):
             return 1-p
         return p
     @staticmethod
-    def cdf(k,p):
+    def cdf(p,k):
         if((k!=0 and k!=1) or p<0 or p>1):
-            raise InvalidInputError("k must be 0 or 1, and p must be between 0 and 1 inclusive")
+            raise ValueError("k must be 0 or 1, and p must be between 0 and 1 inclusive")
         if(k==0):
             return 1-p
         return 1
     @staticmethod
     def random(p):
         if(p<0 or p>1):
-            raise InvalidInputError("p must be between 0 and 1 inclusive")
+            raise ValueError("p must be between 0 and 1 inclusive")
         if(r.random()>=p):
             return 1
         return 0
     @staticmethod
     def kurtosis(p):
         if(p<0 or p>1):
-            raise InvalidInputError("p must be between 0 and 1 inclusive")
+            raise ValueError("p must be between 0 and 1 inclusive")
         return (1-6*p*(1-p))/(p*(1-p))
     @staticmethod
     def mean(p):
-        if((k!=0 and k!=1) or p<0 or p>1):
-            raise InvalidInputError("k must be 0 or 1, and p must be between 0 and 1 inclusive")
+        if(p<0 or p>1):
+            raise ValueError("k must be 0 or 1, and p must be between 0 and 1 inclusive")
         return p
     @staticmethod
     def median(p):
         if(p<0 or p>1):
-            raise InvalidInputError("p must be between 0 and 1 inclusive")
+            raise ValueError("p must be between 0 and 1 inclusive")
         if(p<1/2):
             return 0
         if(p==1/2):
@@ -557,27 +627,27 @@ class bernoulli(Distribution):
     @staticmethod
     def variance(p):
         if(p<0 or p>1):
-            raise InvalidInputError("p must be between 0 and 1 inclusive")
+            raise ValueError("p must be between 0 and 1 inclusive")
         return p*(1-p)
     @staticmethod
     def stddev(p):
         if(p<0 or p>1):
-            raise InvalidInputError("p must be between 0 and 1 inclusive")
+            raise ValueError("p must be between 0 and 1 inclusive")
         return math.sqrt(p*(1-p))
     @staticmethod
     def entropy(p):
         if(p<0 or p>1):
-            raise InvalidInputError("p must be between 0 and 1 inclusive")
+            raise ValueError("p must be between 0 and 1 inclusive")
         return 1/(p*(1-p))
     @staticmethod
     def skewness(p):
         if(p<0 or p>1):
-            raise InvalidInputError("p must be between 0 and 1 inclusive")
+            raise ValueError("p must be between 0 and 1 inclusive")
         return (1-2*p)/math.sqrt(p*(1-p))
     @staticmethod
     def ppf(p,q):
         if(p<0 or p>1):
-            raise InvalidInputError("p must be between 0 and 1 inclusive")
+            raise ValueError("p must be between 0 and 1 inclusive")
         if(q>=p):
             return 1
         return 0
@@ -592,37 +662,37 @@ class beta(Distribution):
     @staticmethod
     def random(aa,bb):
         if(aa<=0 or bb<=0):
-            raise InvalidInputError("aa and bb must be bigger than 0")
-        x=gamma.random(aa)
-        return x/(x+gamma.random(x+y))
+            raise ValueError("aa and bb must be bigger than 0")
+        x=gamma.random(aa,1)
+        return x/(x+gamma.random(bb,1))
     @staticmethod
     def kurtosis(aa,bb):
         if(aa<=0 or bb<=0):
-            raise InvalidInputError("aa and bb must be bigger than 0")
+            raise ValueError("aa and bb must be bigger than 0")
         return 6*((aa-bb)**2*(aa+bb+1)-aa*bb*(aa+bb+2))/(aa*bb*(aa+bb+2)*(aa+bb+3))
     @staticmethod
     def mean(aa,bb):
         if(aa<=0 or bb<=0):
-            raise InvalidInputError("aa and bb must be bigger than 0")
+            raise ValueError("aa and bb must be bigger than 0")
         return aa/(aa+bb)
     @staticmethod
     def median(aa,bb):
         if(aa<=0 or bb<=0):
-            raise InvalidInputError("aa and bb must be bigger than 0")
+            raise ValueError("aa and bb must be bigger than 0")
     @staticmethod
     def variance(aa,bb):
         if(aa<=0 or bb<=0):
-            raise InvalidInputError("aa and bb must be bigger than 0")
+            raise ValueError("aa and bb must be bigger than 0")
         return aa*bb/((aa+bb)**2*(aa+bb+1))
     @staticmethod
     def stddev(aa,bb):
         if(aa<=0 or bb<=0):
-            raise InvalidInputError("aa and bb must be bigger than 0")
+            raise ValueError("aa and bb must be bigger than 0")
         return math.sqrt(aa*bb/((aa+bb)**2*(aa+bb+1)))
     @staticmethod
     def skewness(aa,bb):
         if(aa<=0 or bb<=0):
-            raise InvalidInputError("aa and bb must be bigger than 0")
+            raise ValueError("aa and bb must be bigger than 0")
         return 2*(bb-aa)*math.sqrt(aa+bb+1)/((aa+bb+2)*math.sqrt(aa*bb))
 
 '''
@@ -632,34 +702,34 @@ class betabinomial(Distribution):
     @staticmethod
     def random(aa,bb,n):
         if(aa<=0 or bb<=0 or n%1!=0 or n<1):
-            raise InvalidInputError("aa and bb must be bigger than 0 and n must be a positive integer")
-        return binomial.random(beta.random(aa,bb),n)
+            raise ValueError("aa and bb must be bigger than 0 and n must be a positive integer")
+        return binomial.random(n,beta.random(aa,bb))
     @staticmethod
     def kurtosis(aa,bb,n):
         if(aa<=0 or bb<=0 or n%1!=0 or n<1):
-            raise InvalidInputError("aa and bb must be bigger than 0 and n must be a positive integer")
+            raise ValueError("aa and bb must be bigger than 0 and n must be a positive integer")
         u=(aa+bb)**2*(1+aa+bb)/(n*aa*bb*(aa+bb+2)*(aa+bb+3)*(aa+bb+n))
         v=(aa+bb)*(aa+bb-1+6*n)+3*aa*bb*(n-2)+6*n**2-3*aa*bb*n*(6-n)/(aa+bb)-18*aa*bb*n**2/((aa+bb)**2)
         return u*v
     @staticmethod
     def mean(aa,bb,n):
         if(aa<=0 or bb<=0 or n%1!=0 or n<1):
-            raise InvalidInputError("aa and bb must be bigger than 0 and n must be a positive integer")
+            raise ValueError("aa and bb must be bigger than 0 and n must be a positive integer")
         return n*aa/(aa+bb)
     @staticmethod
     def variance(aa,bb,n):
         if(aa<=0 or bb<=0 or n%1!=0 or n<1):
-            raise InvalidInputError("aa and bb must be bigger than 0 and n must be a positive integer")
+            raise ValueError("aa and bb must be bigger than 0 and n must be a positive integer")
         return n*aa*bb*(aa+bb+n)/((aa+bb)**2*(aa+bb+1))
     @staticmethod
     def stddev(aa,bb,n):
         if(aa<=0 or bb<=0 or n%1!=0 or n<1):
-            raise InvalidInputError("aa and bb must be bigger than 0 and n must be a positive integer")
+            raise ValueError("aa and bb must be bigger than 0 and n must be a positive integer")
         return math.sqrt(n*aa*bb*(aa+bb+n)/((aa+bb)**2*(aa+bb+1)))
     @staticmethod
     def skewness(aa,bb,n):
         if(aa<=0 or bb<=0 or n%1!=0 or n<1):
-            raise InvalidInputError("aa and bb must be bigger than 0 and n must be a positive integer")
+            raise ValueError("aa and bb must be bigger than 0 and n must be a positive integer")
         return (aa+bb+2*n)*(bb-aa)/(aa+bb+2)*math.sqrt((1+aa+bb)/(n*aa*bb)*(n+aa+bb))
 
 '''
@@ -689,6 +759,29 @@ class betagompertz(Distribution):
     @staticmethod
     def pdf(g,t,a,b,x):
             return t*math.exp(g*x)*math.exp(-b*t/g*(math.exp(g*x)-1))/sp.beta(a,b)*math.pow(1-math.exp(-t/g*(math.exp(g*x)-1)),a-1)
+    @staticmethod
+    def mle(x): #better, but still not good
+        args0=[2.0,2.0,2.0,2.0]
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=betagompertz.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(0.25,0.25,0.25,0.25),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(0.001,10),(0.001,10),(0.001,10),(0.001,10)]).x.tolist()
+        return {'g':ret[0],'t':ret[1],'a':ret[2],'l':ret[3]}
+
+#print "Beta-Gompertz distribution"
+#x=[betagompertz.random(1,1,1,1) for i in range(100)]
+#print x
+#print "{1,1,1,1}"
+#print(betagompertz.mle(x))
+#x=[betagompertz.random(1,1,1,1) for i in range(100)]
+#print(betagompertz.mle(x))
+#x=[betagompertz.random(1,1,1,1) for i in range(100)]
+#print(betagompertz.mle(x))
+#print("")
+
 
 '''
 Beta-Pascal distribution*
@@ -705,19 +798,19 @@ class betaprime(Distribution):
     @staticmethod
     def random(aa,bb):
         if(aa<=0 or bb<=0):
-            raise InvalidInputError("aa and bb must be greater than 0")
+            raise ValueError("aa and bb must be greater than 0")
         return gamma.random(aa,1)/gamma.random(bb,1)
     @staticmethod
     def mean(aa,bb):
         if(aa<=0 or bb<=0):
-            raise InvalidInputError("aa and bb must be greater than 0")
-        if(beta>1):
+            raise ValueError("aa and bb must be greater than 0")
+        if(bb>1):
             return aa/(bb-1)
         return None
     @staticmethod
     def mode(aa,bb):
         if(aa<=0 or bb<=0):
-            raise InvalidInputError("aa and bb must be greater than 0")
+            raise ValueError("aa and bb must be greater than 0")
         if(aa>=1):
             return (aa-1)/(bb+1)
         return 0
@@ -737,7 +830,7 @@ class binomial(Distribution):
     @staticmethod
     def random(n,p):
         if(n%1!=0 or n<0 or p<0 or p>1):
-            raise InvalidInputError("n must be a non-negative integer and p must be between 0 and 1 inclusive")
+            raise ValueError("n must be a non-negative integer and p must be between 0 and 1 inclusive")
         count=0
         for _ in range(n):
             if r.random()<p:
@@ -746,32 +839,32 @@ class binomial(Distribution):
     @staticmethod
     def kurtosis(n,p):
         if(n%1!=0 or n<0 or p<0 or p>1):
-            raise InvalidInputError("n must be a non-negative integer and p must be between 0 and 1 inclusive")
+            raise ValueError("n must be a non-negative integer and p must be between 0 and 1 inclusive")
         return (1-6*p*(1-p))/(n*p*(1-p))
     @staticmethod
     def mean(n,p):
         if(n%1!=0 or n<0 or p<0 or p>1):
-            raise InvalidInputError("n must be a non-negative integer and p must be between 0 and 1 inclusive")
+            raise ValueError("n must be a non-negative integer and p must be between 0 and 1 inclusive")
         return n*p
     @staticmethod
     def median(n,p):
         if(n%1!=0 or n<0 or p<0 or p>1):
-            raise InvalidInputError("n must be a non-negative integer and p must be between 0 and 1 inclusive")
+            raise ValueError("n must be a non-negative integer and p must be between 0 and 1 inclusive")
         return int(round(n*p))
     @staticmethod
     def variance(n,p):
         if(n%1!=0 or n<0 or p<0 or p>1):
-            raise InvalidInputError("n must be a non-negative integer and p must be between 0 and 1 inclusive")
+            raise ValueError("n must be a non-negative integer and p must be between 0 and 1 inclusive")
         return n*p*(1-p)
     @staticmethod
     def stddev(n,p):
         if(n%1!=0 or n<0 or p<0 or p>1):
-            raise InvalidInputError("n must be a non-negative integer and p must be between 0 and 1 inclusive")
+            raise ValueError("n must be a non-negative integer and p must be between 0 and 1 inclusive")
         return math.sqrt(n*p*(1-p))
     @staticmethod
     def skewness(n,p):
         if(n%1!=0 or n<0 or p<0 or p>1):
-            raise InvalidInputError("n must be a non-negative integer and p must be between 0 and 1 inclusive")
+            raise ValueError("n must be a non-negative integer and p must be between 0 and 1 inclusive")
         return (1-2*p)/math.sqrt(n*p*(1-p))
 
 '''
@@ -798,6 +891,18 @@ class birnbaumsaunders(Distribution): #standard fatigue-life
     @staticmethod
     def ppf(gmma,q):
         return 1/4.0*math.pow(gmma*st.norm.ppf(q)+math.sqrt(4+math.pow(gmma*st.norm.ppf(q),2)),2)
+    @staticmethod
+    def mle(x):#not working
+        args0=[1.0]
+        n=len(x)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=birnbaumsaunders.pdf(args_[0],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(2),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(-10,10)]).x.tolist()
+        return {'gamma':ret[0]}
 
 '''
 Boltzmann distribution
@@ -818,88 +923,87 @@ class boltzmann(Distribution):
     def median(N,l):
         return math.ceil(-math.log(1-(1-math.exp(-l*N))/2)/l-1)
     @staticmethod
-    def ppf(N,l):
+    def ppf(N,l,q):
         return math.ceil(-math.log(1-q*(1-math.exp(-l*N)))/l-1)
     @staticmethod
-    def mle(x):
+    def mle(x): #not working
         args0=[1.0,1.0]
         n=len(x)
-        func= lambda n,x,args_: n*math.log(1-math.exp(-args_[1]))-n*math.log(1-math.exp(-args_[1]*args_[0]))-args_[1]*sum(x)
-        ret=op.basinhopping(func,args0)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=boltzmann.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(-1,1),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(-10,-0.001),(0.001,10)]).x.tolist()
         return {'N':ret[0],'l':ret[1]}
 
 '''
 Bounded pareto distribution
 '''
-class boundedpareto(Distribution):
+class boundedpareto(Distribution): #NOT WORKING
     @staticmethod
     def pdf(aa,H,L,x):
         if(aa<=0):
-            raise InvalidInputError("aa must be bigger than 0")
+            raise ValueError("aa must be bigger than 0")
         if(L<=0):
-            raise InvalidInputError("L must be bigger than 0")
+            raise ValueError("L must be bigger than 0")
         if(H<=L):
-            raise InvalidInputError("H must be bigger than L")
+            raise ValueError("H must be bigger than L")
         if(x<H or x>L):
-            raise InvalidInputError("x must be between H and L inclusive")
+            raise ValueError("x must be between H and L inclusive")
         return (aa*math.pow(L,aa)*math.pow(x,-aa-1))/(1-math.pow(L/H,aa))
     @staticmethod
     def cdf(aa,H,L,x):
         if(aa<=0):
-            raise InvalidInputError("aa must be bigger than 0")
+            raise ValueError("aa must be bigger than 0")
         if(L<=0):
-            raise InvalidInputError("L must be bigger than 0")
+            raise ValueError("L must be bigger than 0")
         if(H<=L):
-            raise InvalidInputError("H must be bigger than L")
+            raise ValueError("H must be bigger than L")
         if(x<H or x>L):
-            raise InvalidInputError("x must be between H and L inclusive")
+            raise ValueError("x must be between H and L inclusive")
         return (1-math.pow(L,aa)*math.pow(x,-aa))/(1-math.pow(L/H,aa))
     @staticmethod
     def random(aa,H,L):
         if(aa<=0):
-            raise InvalidInputError("aa must be bigger than 0")
+            raise ValueError("aa must be bigger than 0")
         if(L<=0):
-            raise InvalidInputError("L must be bigger than 0")
+            raise ValueError("L must be bigger than 0")
         if(H<=L):
-            raise InvalidInputError("H must be bigger than L")
+            raise ValueError("H must be bigger than L")
         n=r.random()
         return math.pow(-(n*math.pow(H,aa)-n*math.pow(L,aa)-math.pow(H,aa))/(math.pow(H,aa)*math.pow(L,aa)),-1/aa)
     @staticmethod
     def mean(aa,H,L):
         if(aa<=0):
-            raise InvalidInputError("aa must be bigger than 0")
+            raise ValueError("aa must be bigger than 0")
         if(L<=0):
-            raise InvalidInputError("L must be bigger than 0")
+            raise ValueError("L must be bigger than 0")
         if(H<=L):
-            raise InvalidInputError("H must be bigger than L")
+            raise ValueError("H must be bigger than L")
         if(aa!=1):
             return math.pow(L,aa)/(1-math.pow(L/H,aa))*(aa/(aa-1))*(1/math.pow(L,aa-1)-1/math.pow(H,aa-1))
         return None
     @staticmethod
     def median(aa,H,L):
         if(aa<=0):
-            raise InvalidInputError("aa must be bigger than 0")
+            raise ValueError("aa must be bigger than 0")
         if(L<=0):
-            raise InvalidInputError("L must be bigger than 0")
+            raise ValueError("L must be bigger than 0")
         if(H<=L):
-            raise InvalidInputError("H must be bigger than L")
+            raise ValueError("H must be bigger than L")
         return L*math.pow(1-1/2.0*(1-math.pow(L/H,aa)),-1/aa)
     @staticmethod
     def ppf(aa,H,L,q):
         if(aa<=0):
-            raise InvalidInputError("aa must be bigger than 0")
+            raise ValueError("aa must be bigger than 0")
         if(L<=0):
-            raise InvalidInputError("L must be bigger than 0")
+            raise ValueError("L must be bigger than 0")
         if(H<=L):
-            raise InvalidInputError("H must be bigger than L")
+            raise ValueError("H must be bigger than L")
         return math.pow(-(q*math.pow(H,aa)-q*math.pow(L,aa)-math.pow(H,aa))/(math.pow(H,aa)*math.pow(L,aa)),-1/aa)
-    @staticmethod
-    def mle(x):
-        args0=[1,1,1]
-        n=len(x)
-        func = lambda x,n,args_ : n*math.log(args_[0])+n*args_[0]*math.log(args_[2])-(args_[0]+1)*np.sum(np.log(x))-n*math.log(1-math.pow(args_[2]/args_[1],args_[0]))
-        ret=op.basinhopping(func,args0)
-        return {'aa':ret[0],'H':ret[1],'L':ret[2]}
+
 '''
 Bradford distribution*
 '''
@@ -924,17 +1028,17 @@ class burr2(Distribution):
     @staticmethod
     def pdf(r,mu,sigma,x):
         if(r<=0 or sigma<=0):
-            raise InvalidInputError("r and sigma must be greater than 0")
+            raise ValueError("r and sigma must be greater than 0")
         return 1/sigma*r*math.pow(1+math.exp((-x+mu)/sigma),-r-1)/math.exp((x-mu)/sigma)
     @staticmethod
     def cdf(r,mu,sigma,x):
         if(r<=0 or sigma<=0):
-            raise InvalidInputError("r and sigma must be greater than 0")
+            raise ValueError("r and sigma must be greater than 0")
         return 1/math.pow(1+math.exp((x-mu)/sigma),r)
     @staticmethod
     def random(r,mu,sigma): #standard burr ii
         if(r<=0 or sigma<=0):
-            raise InvalidInputError("r and sigma must be bigger than 0")
+            raise ValueError("r and sigma must be bigger than 0")
         return mu+sigma*math.log(math.pow(1/rg0(),1/r)-1)
     @staticmethod
     def median(r,mu,sigma):
@@ -942,14 +1046,18 @@ class burr2(Distribution):
     @staticmethod
     def ppf(r,mu,sigma,q):
         if(r<=0 or sigma<=0):
-            raise InvalidInputError("r and sigma must be bigger than 0")
+            raise ValueError("r and sigma must be bigger than 0")
         return mu+sigma*math.log(math.pow(1/q,1/r)-1)
     @staticmethod
     def mle(x):
         args0=[1,1,1]
         n=len(x)
-        func = lambda n,x,args_: -n*math.log(args_[2])+n*math.log(args_[0])-(args_[0]+1)*np.sum(np.log(1+np.exp((-np.array(x)+args_[1])/args_[2])))-np.sum((np.array(x)-args_[1])/args_[2])
-        ret=op.basinhopping(func,args0)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=burr2.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,0,1),method='Nelder-Mead').x.tolist()
         return {'r':ret[0],'mu':ret[1],'sigma':ret[2]}
 
 '''
@@ -972,11 +1080,16 @@ class burr3(Distribution):
     def ppf(r,k,l,s,q):
         return s*math.pow(math.pow(q,-1/r)-1,-1/k)+l
     @staticmethod
-    def mle(x):
+    def mle(x): #not working
         args0=[1,1,1,1]
         n=len(x)
-        func = lambda n,x,args_: -n*math.log(args_[3])+n*math.log(args_[0])+n*math.log(args_[1])+(args_[0]*args_[1]-1)*np.sum(np.log((np.array(x)-args_[2])/args_[3]))-(args_[0]+1)*np.log(1+np.power(x,args_[1]))
-        ret=op.basinhopping(func,args0)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=burr3.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(1,10),(1,10),(1,10),(1,10)]).x.tolist()
         return {'r':ret[0],'k':ret[1],'l':ret[2],'s':ret[3]}
 
 '''
@@ -987,8 +1100,8 @@ class burr5(Distribution):
     def random(r,k,l,s):
         return s*math.atan(-math.log((math.pow(rg0(),-1/r)-1)/k))+l
     @staticmethod
-    def pdf(r,k,l,s,x):
-        return r*k*math.pow(1+k/math.exp(math.tan((x-l)/s)),-r-1)*math.sec((x-l)/s)**2/math.exp(math.tan(x))
+    def pdf(r,k,l,s,x): #something's wrong here
+        return r*k*math.pow(1+k/math.exp(math.tan((x-l)/s)),-r-1)*(1/math.cos((x-l)/s)**2)/math.exp(math.tan(x))/s
     @staticmethod
     def cdf(r,k,l,s,x):
         return math.pow(1+k*math.exp(-math.tan((x-l)/s)),-r)
@@ -999,11 +1112,16 @@ class burr5(Distribution):
     def ppf(r,k,l,s,q):
         return s*math.atan(-math.log((math.pow(q,-1/r)-1)/k))+l
     @staticmethod
-    def mle(x):
-        args0=[1,1,1,1]
+    def mle(x): #not working
+        args0=[2.0,2.0,2.0,2.0]
         n=len(x)
-        func = lambda x,n,args_: n*math.log(args_[0])+n*math.log(args_[1])-(args_[0]+1)*np.sum(np.log(np.power((np.exp(np.tan((x-args_[2])/args_[3]))/args_[1]),-1)+1))+2*np.sum(np.log(np.sec((x-args_[2])/args_[3])))-np.sum(np.tan(x))
-        ret=op.basinhopping(func,args0)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=burr5.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,0,1),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(0.01,10),(0.01,10),(-25,25),(0.01,math.pi)]).x.tolist()
         return {'r':ret[0],'k':ret[1],'l':ret[2],'s':ret[3]}
 
 '''
@@ -1015,7 +1133,7 @@ class burr6(Distribution):
         return s*math.asinh(-math.log((math.pow(rg0(),-1/r)-1)/k))+l
     @staticmethod
     def pdf(r,k,s,l,x):
-        return r*k*math.pow(1+k/math.exp(math.sinh(x)),-r-1)*math.cosh(x)/math.exp(math.sinh(x))
+        return r*k*math.pow(1+k/math.exp(math.sinh((x-l)/s)),-r-1)*math.cosh((x-l)/s)/math.exp(math.sinh((x-l)/s))/s
     @staticmethod
     def cdf(r,k,l,s,x):
         return math.pow(1+k*math.exp(-math.sinh((x-l)/s)),-r)
@@ -1025,16 +1143,25 @@ class burr6(Distribution):
     @staticmethod
     def ppf(r,k,l,s,q):
         return s*math.asinh(-math.log((math.pow(q,-1/r)-1)/k))+l
-#   @staticmethod
-#       def mle(x):
-#       args0=[1,1,1,1]
+    @staticmethod
+    def mle(x): #not working
+        args0=[2.0,2.0,2.0,2.0]
+        n=len(x)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=burr6.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,0,0),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(0.01,10),(0.01,10),(-25,25),(-25,25)])
+        return {'r':ret[0],'k':ret[1],'l':ret[2],'s':ret[3]}
 
 '''
 Burr VII distribution
 '''
 class burr7(Distribution):
     @staticmethod
-    def random(r):
+    def random(r,l,s):
         return s*math.atanh(math.pow(rg0()*math.pow(2,r),1/r)-1)+l
     @staticmethod
     def pdf(r,l,s,x):
@@ -1049,11 +1176,16 @@ class burr7(Distribution):
     def ppf(r,l,s,q):
         return s*math.atanh(math.pow(q*math.pow(2,r),1/r)-1)+l
     @staticmethod
-    def mle(x):
-        args0=[1,1,1]
+    def mle(x): #not working
+        args0=[2.0,2.0,2.0]
         n=len(x)
-        func = lambda n,x,args_: -n*math.log(args_[2])+n*math.log(args_[0])+2*np.sum(np.log(x))+(args_[0]-1)*np.log(1+np.tan((np.array(x)-args_[1])/args_[2]))-args_[0]*math.log(2)
-        ret=op.basinhopping(func,args0)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=burr7.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,0,1),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(0.01,100),(-25,25),(0.01,100)]).x.tolist()
         return {'r':ret[0],'l':ret[1],'s':ret[2]}
 
 '''
@@ -1077,10 +1209,15 @@ class burr8(Distribution):
         return s*math.log(math.tan(math.pi/2*math.pow(q,1/r)))+l
     @staticmethod
     def mle(x):
-        args0=[1,1,1]
+        args0=[2.0,2.0,2.0]
         n=len(x)
-        func= lambda x,n,args_: -n*math.log(args_[2])+n*math.log(args_[1])+np.sum((np.array(x)-args_[1])/args_[2])+n*args_[0]*math.log(2/math.pi)+(args_[0]-1)*np.sum(np.log(np.atan(np.exp((np.array(x)-args_[1])/args_[2]))))-np.sum(np.log(1+np.exp(2*(np.array(x)-args_[1])/args_[2])))
-        ret=op.basinhopping(func,args0)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=burr8.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,0,1),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(0.05,100),(-25,25),(0.01,100)]).x.tolist()
         return {'r':ret[0],'l':ret[1],'s':ret[2]}
 
 '''
@@ -1104,11 +1241,16 @@ class burr10(Distribution):
     def ppf(r,k,l,s,q):
         return math.log(math.pow((2/(1-q)-2)/k+1,1/r)-1)*s+l
     @staticmethod
-    def mle(x):
-        args0=[1,1,1,1]
+    def mle(x): #not working
+        args0=[2.0,2.0,2.0,2.0]
         n=len(x)
-        func = lambda x,n,args_: -n*math.log(args_[3])+n*math.log(2)+np.sum((np.array(x)-args_[2])/args_[3])+(args_[0]-1)*np.sum(np.log(1+np.exp((np.array(x)-args_[2])/args_[3])))+n*math.log(args_[1])+n*math.log(args_[0])-2*np.sum(np.log(args_[1]*np.exp((np.array(x)-args_[2])/args_[3])+2-args_[1]))
-        ret=op.basinhopping(func,args0)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=burr10.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,0,1),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(0.01,10),(0.01,10),(-25,25),(0.01,10)]).x.tolist()
         return {'r':ret[0],'k':ret[1],'l':ret[2],'s':ret[3]}
 
 '''
@@ -1118,34 +1260,39 @@ class burr12(Distribution):
     @staticmethod
     def pdf(c,k,x):
         if(c<=0 or k<=0 or x<=0):
-            raise InvalidInputError("c, k, and x must be bigger than 0")
+            raise ValueError("c, k, and x must be bigger than 0")
         return c*k*math.pow(x,c-1)/math.pow(1+math.pow(x,c),k+1)
     @staticmethod
     def cdf(k,c,x):
         if(c<=0 or k<=0 or x<=0):
-            raise InvalidInputError("c, k, and x must be bigger than 0")
+            raise ValueError("c, k, and x must be bigger than 0")
         return 1-math.pow(1+math.pow(x,c),-k)
     @staticmethod
     def random(c,k):
         if(c<=0 or k<=0):
-            raise InvalidInputError("c and k must be bigger than 0")
-        return math.pow(math.pow(1-u,-1/k)-1,1/c)
+            raise ValueError("c and k must be bigger than 0")
+        return math.pow(math.pow(1-rg0(),-1/k)-1,1/c)
     @staticmethod
     def median(c,k):
         if(c<=0 or k<=0):
-            raise InvalidInputError("c and k must be bigger than 0")
+            raise ValueError("c and k must be bigger than 0")
         math.pow(math.pow(2,1/k)-1,1/c)
     @staticmethod
     def ppf(c,k,q):
         if(c<=0 or k<=0):
-            raise InvalidInputError("c and k must be bigger than 0")
+            raise ValueError("c and k must be bigger than 0")
         math.pow(math.pow(1-q,-1/k)-1,1/c)
     @staticmethod
     def mle(x):
-        args0=[1,1]
+        args0=[2.0,2.0]
         n=len(x)
-        func = lambda x,n,args_: n*math.log(args_[0])+n*math.log(args_[1])+(args_[0]-1)*np.sum(np.log(x))-(args_[1]+1)*np.sum(np.log(np.power(x,args_[0])+1))
-        ret=op.basinhopping(func,args0)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=burr12.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(0.01,10),(0.01,10)]).x.tolist()
         return {'c':ret[0],'k':ret[1]}
 
 '''
@@ -1155,17 +1302,17 @@ class cauchy(Distribution):
     @staticmethod
     def pdf(gmma,x0,x):
         if(gmma<=0):
-            raise InvalidInputError("gamma must be bigger than 0")
+            raise ValueError("gamma must be bigger than 0")
         return 1/(math.pi*gmma*(1+((x-x0)/gmma)**2))
     @staticmethod
     def cdf(gmma,x0,x):
         if(gmma<=0):
-            raise InvalidInputError("gamma must be bigger than 0")
+            raise ValueError("gamma must be bigger than 0")
         return 1/math.pi*math.atan((x-x0)/gmma)+1/2
     @staticmethod
     def random(gmma,x0):
         if(gmma<=0):
-            raise InvalidInputError("gamma must be bigger than 0")
+            raise ValueError("gamma must be bigger than 0")
         return x0+gmma*math.tan(math.pi*(r.random()-1/2))
     @staticmethod
     def kurtosis(gmma,x0):
@@ -1176,12 +1323,12 @@ class cauchy(Distribution):
     @staticmethod
     def median(gmma,x0):
         if(gmma<=0):
-            raise InvalidInputError("gamma must be bigger than 0")
+            raise ValueError("gamma must be bigger than 0")
         return x0+gmma*math.tan(0)
     @staticmethod
     def mode(gmma,x0):
         if(gmma<=0):
-            raise InvalidInputError("gamma must be bigger than 0")
+            raise ValueError("gamma must be bigger than 0")
     @staticmethod
     def variance(gmma,x0):
         return None
@@ -1191,22 +1338,26 @@ class cauchy(Distribution):
     @staticmethod
     def entropy(gmma,x0):
         if(gmma<=0):
-            raise InvalidInputError("gamma must be bigger than 0")
+            raise ValueError("gamma must be bigger than 0")
         return math.log(gmma)+math.log(4*math.pi)
     @staticmethod
     def skewness(gmma,x0):
         return None
     @staticmethod
-    def ppf(gmma,x0):
+    def ppf(gmma,x0,q):
         if(gmma<=0):
-            raise InvalidInputError("gamma must be bigger than 0")
+            raise ValueError("gamma must be bigger than 0")
         return x0+gmma*math.tan(math.pi*(q-1/2))
     @staticmethod
     def mle(x):
-        args0=[1,1]
+        args0=[2.0,2.0]
         n=len(x)
-        func = lambda x,n,args_: -n*math.log(math.pi)-n*math.log(args_[0])-np.sum(np.log(np.power((np.array(x)-args_[1])/args_[0],2)+1))
-        ret=op.basinhopping(func,args0)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=cauchy.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.differential_evolution(mlefunc,[(0.01,100),(-25,25)]).x.tolist()
         return {'gamma':ret[0],'x0':ret[1]}
 
 '''
@@ -1235,6 +1386,18 @@ class chi(Distribution):
     @staticmethod
     def skewness(k):
         return (k-(math.sqrt(2)*math.gamma((k+1)/2)/math.gamma(k/2))**2)/chi.stddev(k)**3*(1-2*chi.variance(k))
+    @staticmethod
+    def mle(x):
+        args0=[1.0]
+        n=len(x)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=chi.pdf(args_[0],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(0.01,50)]).x.tolist()
+        return {'k':ret[0]}
 
 '''
 Chi-square distribution
@@ -1270,6 +1433,17 @@ class chi2(Distribution): #Chi-squared
     @staticmethod
     def skewness(k):
         return math.sqrt(8/k)
+    @staticmethod
+    def mle(x):
+        args0=[1.0]
+        n=len(x)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=chi2.pdf(args_[0],i)
+            return -tomin
+        ret=op.differential_evolution(mlefunc,[(0.01,50)]).x.tolist()
+        return {'k':ret[0]}
 
 '''
 Chi-square exponential distribution*
@@ -1288,7 +1462,7 @@ class compexpinvweibulllog(Distribution):
         return math.pow(-math.log((1-(1-l)*rg0())/l)/t,-1/b)
     @staticmethod
     def pdf(b,l,t,x):
-        return t*b*l/(-math.log(1-l)*(1-l*math.exp(-t*math.pow(x,-b))))*math.exp(y,-b-1)*math.exp(-t*math.pow(y,-b))
+        return t*b*l/(-math.log(1-l)*(1-l*math.exp(-t*math.pow(x,-b))))*math.pow(x,-b-1)*math.exp(-t*math.pow(x,-b))
     @staticmethod
     def cdf(b,l,t,x):
         return (math.exp(l*math.exp(-t*math.pow(x,-b)))-1)/(math.exp(l)-1)
@@ -1298,6 +1472,18 @@ class compexpinvweibulllog(Distribution):
     @staticmethod
     def ppf(b,l,t,q):
         return math.pow(-math.log((1-(1-l)*q)/l)/t,-1/b)
+    @staticmethod
+    def mle(x): #not working
+        args0=[2.0,2.0,2.0]
+        n=len(x)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=compexpinvweibulllog.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,0.5,1),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(0.01,25),(0.01,0.999),(0.01,25)]).x.tolist()
+        return {'b':ret[0],'l':ret[1],'t':ret[2]}
 
 '''
 Complementary exponentiated exponential-geometric lifetime distribution
@@ -1320,6 +1506,17 @@ class complementaryexponentiatedexpgeolifetime(Distribution):
     @staticmethod
     def ppf(a,l,t,q):
         return -(math.log(1-math.pow(q/(t*(1-q)+q),1/a)))/l
+    @staticmethod
+    def mle(x):
+        args0=[2.0,2.0,2.0]
+        n=len(x)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=complementaryexponentiatedexpgeolifetime.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.differential_evolution(mlefunc,[(0.01,10),(0.01,10),(0.01,10)]).x.tolist()
+        return {'a':ret[0],'l':ret[1],'t':ret[2]}
 
 '''
 Complementary exponentiated inverse Weibull poisson distribution
@@ -1329,8 +1526,8 @@ class complementaryexponentiatedinvweibullpoisson(Distribution):
     def random(b,l,t):
         return math.pow(-math.log(math.log(rg0()*(math.exp(l)-1)+1)/l)/t,-1/b)
     @staticmethod
-    def pdf(b,l,t,x):
-        return t*b*l/(math.exp(l)-1)*math.pow(y,-b-1)*math.exp(-math.pow(x,-t*b))*math.exp(l*math.exp(-t*math.pow(x,-b)))
+    def pdf(b,l,t,x): #something wrong here?
+        return t*b*l/(math.exp(l)-1)*math.pow(x,-b-1)*math.exp(-math.pow(x,-t*b))*math.exp(l*math.exp(-t*math.pow(x,-b)))
     @staticmethod
     def cdf(b,l,t,x):
         return (math.exp(l*math.exp(-t*math.pow(x,-b)))-1)/(math.exp(l)-1)
@@ -1340,6 +1537,17 @@ class complementaryexponentiatedinvweibullpoisson(Distribution):
     @staticmethod
     def ppf(b,l,t,q):
         return math.pow(-math.log(math.log(q*(math.exp(l)-1)+1)/l)/t,-1/b)
+    @staticmethod
+    def mle(x):
+        args0=[2.0,2.0,2.0]
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=complementaryexponentiatedinvweibullpoisson.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        #ret=op.minimize(mlefunc,(2,2,2),method="Nelder-Mead").x.tolist()
+        ret=op.differential_evolution(mlefunc,[(0.01,10),(0.01,10),(0.01,10)]).x.tolist()
+        return {'b':ret[0],'l':ret[1],'t':ret[2]}
 
 '''
 Compound Poisson distribution*
@@ -1370,28 +1578,40 @@ class dagum(Distribution):
     @staticmethod
     def pdf(p,a,b,x):
         if(p<=0 or a<=0 or b<=0 or x<=0):
-            raise InvalidInputError("p, a, b, and x must be bigger than 0")
-        return a*p/x*(math.pow(x/b,a*p)/math.pow(math.pow(x/b,a)+1,p+1))
+            raise ValueError("p, a, b, and x must be bigger than 0")
+        return a*p/x*math.pow(x/b,a*p)/math.pow(math.pow(x/b,a)+1,p+1)
     @staticmethod
     def cdf(p,a,b,x):
         if(p<=0 or a<=0 or b<=0 or x<=0):
-            raise InvalidInputError("p, a, b, and x must be bigger than 0")
+            raise ValueError("p, a, b, and x must be bigger than 0")
         return math.pow(1+math.pow(x/b,-a),-p)
     @staticmethod
     def random(p,a,b):
         if(p<=0 or a<=0 or b<=0):
-            raise InvalidInputError("p, a, and b must be bigger than 0")
+            raise ValueError("p, a, and b must be bigger than 0")
         return b*math.pow(math.pow(r.random(),-1/p)-1,-1/a)
     @staticmethod
     def median(p,a,b):
         if(p<=0 or a<=0 or b<=0):
-            raise InvalidInputError("p, a, and b must be bigger than 0")
+            raise ValueError("p, a, and b must be bigger than 0")
         return b*math.pow(-1+math.pow(2,1/p),-1/a)
     @staticmethod
     def ppf(p,a,b,q):
         if(p<=0 or a<=0 or b<=0):
-            raise InvalidInputError("p, a, and b must be bigger than 0")
+            raise ValueError("p, a, and b must be bigger than 0")
         return b*math.pow(math.pow(q,-1/p)-1,-1/a)
+    @staticmethod
+    def mle(x):
+        args0=[2.0,2.0,2.0]
+        n=len(x)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=dagum.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(3,3,3),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(0.01,10),(0.01,10),(0.01,10)]).x.tolist()
+        return {'p':ret[0],'a':ret[1],'b':ret[2]}
 
 '''
 Discrete generalized Rayleigh distribution
@@ -1417,6 +1637,18 @@ class discretegenrayleigh(Distribution):
     def ppf(a,l,q):
         p=math.exp(-(l**2))
         return 1-math.sqrt(math.log(1-math.pow(q,1/a))/math.log(p))
+    @staticmethod
+    def mle(x): #not working
+        args0=[2.0,2.0]
+        n=len(x)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=discretegenrayleigh.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(0.01,10),(-5,5)]).x.tolist()
+        return {'a':ret[0],'l':ret[1]}
 
 '''
 Discrete Weibull distribution
@@ -1440,6 +1672,20 @@ class discreteweibull(Distribution):
     @staticmethod
     def ppf(aa,bb,q):
         return math.pow(-math.log(1-q),1/bb)*aa-1
+    @staticmethod
+    def mle(x): #not working
+        args0=[2.0,2.0]
+        n=len(x)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=discreteweibull.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(2,2),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(0.01,10),(0.01,10)]).x.tolist()
+        print(ret[0])
+        return {'aa':ret[0],'bb':ret[1]}
+
 
 '''
 Double Weibull distribution
@@ -1481,6 +1727,18 @@ class doubleweibull(Distribution):
         if q<=0.5:
             return -b*math.pow(math.log(1/(2*q)),1/c)+a
         return b*math.pow(math.log(1/(2*q-1)),1/c)+a
+    @staticmethod
+    def mle(x): #not working
+        args0=[2.0,2.0,2.0]
+        n=len(x)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=doubleweibull.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(0,5,5),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'c':ret[2]}
+
 
 '''
 Erlang distribution
@@ -1489,62 +1747,77 @@ class erlang(Distribution):
     @staticmethod
     def pdf(k,lmbda,x):
         if(k%1!=0 or k<=0):
-            raise InvalidInputError("k must be a positive integer")
+            raise ValueError("k must be a positive integer")
         if(lmbda<=0 or x<=0):
-            raise InvalidInputError("lmbda and x must be bigger than 0")
+            raise ValueError("lmbda and x must be bigger than 0")
         return math.pow(lmbda,k)*math.pow(x,k-1)*math.exp(-lmbda*x)/math.factorial(k-1)
     @staticmethod
     def random(k,lmbda):
         if(k%1!=0 or k<=0):
-            raise InvalidInputError("k must be a positive integer")
+            raise ValueError("k must be a positive integer")
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bigger than 0")
+            raise ValueError("lmbda must be bigger than 0")
         total=1
         for _ in range(k):
-            total+=exp.random(lmbda/(float(k)))
+            total*=rg0()
+        #total=1
+        #for _ in range(k):
+        #total+=exponential.random(lmbda/(float(k)))
         return -math.log(total)/lmbda
     @staticmethod
     def kurtosis(k,lmbda):
         if(k%1!=0 or k<=0):
-            raise InvalidInputError("k must be a positive integer")
+            raise ValueError("k must be a positive integer")
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bigger than 0")
+            raise ValueError("lmbda must be bigger than 0")
         return 6/k
     @staticmethod
     def mean(k,lmbda):
         if(k%1!=0 or k<=0):
-            raise InvalidInputError("k must be a positive integer")
+            raise ValueError("k must be a positive integer")
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bigger than 0")
+            raise ValueError("lmbda must be bigger than 0")
         return k/lmbda
     @staticmethod
     def mode(k,lmbda):
         if(k%1!=0 or k<=0):
-            raise InvalidInputError("k must be a positive integer")
+            raise ValueError("k must be a positive integer")
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bigger than 0")
+            raise ValueError("lmbda must be bigger than 0")
         return 1/lmbda*(k-1)
     @staticmethod
     def variance(k,lmbda):
         if(k%1!=0 or k<=0):
-            raise InvalidInputError("k must be a positive integer")
+            raise ValueError("k must be a positive integer")
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bigger than 0")
+            raise ValueError("lmbda must be bigger than 0")
         return k/lmbda**2
     @staticmethod
     def stddev(k,lmbda):
         if(k%1!=0 or k<=0):
-            raise InvalidInputError("k must be a positive integer")
+            raise ValueError("k must be a positive integer")
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bigger than 0")
+            raise ValueError("lmbda must be bigger than 0")
         return math.sqrt(k)/lmbda
     @staticmethod
     def skewness(k,lmbda):
         if(k%1!=0 or k<=0):
-            raise InvalidInputError("k must be a positive integer")
+            raise ValueError("k must be a positive integer")
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bigger than 0")
+            raise ValueError("lmbda must be bigger than 0")
         return 2/math.sqrt(k)
+    @staticmethod
+    def mle(x):
+        args0=[2.0,2.0]
+        n=len(x)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=erlang.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'k':ret[0],'lmbda':ret[1]}
+
 
 '''
 Exponentiated discrete Weibull distribution
@@ -1555,7 +1828,7 @@ class expdiscweibull(Distribution): #exponentiated discrete weibull
         return math.pow(math.pow(math.log(1-rg0()),(1/g))/math.log(p),1/a)-1
     @staticmethod
     def pdf(p,a,g,x):
-        return math.pow(1-math.pow(p,math.pow(x+1,a)),g) - math.pow(1-math.pow(p,math.pow(x,a)))
+        return math.pow(1-math.pow(p,math.pow(x+1,a)),g) - math.pow(1-math.pow(p,math.pow(x,a)),g)
     @staticmethod
     def cdf(p,a,g,x):
         return math.pow(1-math.pow(p,math.pow(x+1,a)),g)
@@ -1565,6 +1838,16 @@ class expdiscweibull(Distribution): #exponentiated discrete weibull
     @staticmethod
     def ppf(p,a,g,q):
         return math.pow(math.pow(math.log(1-q),(1/g))/math.log(p),1/a)-1
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=expdiscweibull.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(0.5,1,1),method='Nelder-Mead').x.tolist()
+        return {'p':ret[0],'a':ret[1],'g':ret[2]}
+
 
 '''
 Exponentiated generalized extreme value distribution
@@ -1599,6 +1882,16 @@ class expgenextremevalue(Distribution): #exponential generalized extreme value
         if(k==0):
             return -math.log(-math.log(q)/b)
         return (1-math.pow(-math.log(q)/b,k))/k
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=expgenextremevalue.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(0.1,10),(0.01,(1/max(x))-0.01)]).x.tolist()
+        return {'b':ret[0],'k':ret[1]}
 
 '''
 Exponentiated generalized Frechet distribution
@@ -1619,6 +1912,16 @@ class expgenfrechet(Distribution): #exponentiated generalized frechet
     @staticmethod
     def ppf(a,b,l,s,q):
         return s*l/math.log(1-math.pow(1-math.pow(q,1/b),1/a))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=expgenfrechet.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        #ret=op.differential_evolution(mlefunc,[(0.01,5),(0.01,5),(0.01,5),(0.01,5)])
+        return {'a':ret[0],'b':ret[1],'l':ret[2],'s':ret[3]}
 
 '''
 Exponentiated generalized Gumbel distribution
@@ -1639,6 +1942,16 @@ class expgengumbel(Distribution): #exponentiated generalized gumbel
     @staticmethod
     def ppf(a,b,m,s,q):
         return m-s*math.log(-math.log(1-math.pow(1-math.pow(q,1/b),1/a)))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=expgengumbel.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,0,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'m':ret[2],'s':ret[3]}
+
 '''
 Exponentiated generalized inverse exponential distribution
 '''
@@ -1672,6 +1985,15 @@ class expgeninvweibull(Distribution): #exponentiated generalized inverse weibull
     @staticmethod
     def ppf(a,b,l,t,q):
         return l*math.pow(-math.log(1-math.pow(1-math.pow(q,1/b),1/a)),-1/t)
+    @staticmethod
+    def mle(x): #not working
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=expgeninvweibull.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'l':ret[2],'t':ret[3]}
 
 '''
 Exponentiated generalized linear exponential distribution
@@ -1699,6 +2021,15 @@ class expgenlinearexp(Distribution): #exponentiated generalized linear exponenti
         if(b!=0):
             return -a/b+1/b*math.sqrt(a**2+2*b*math.pow(-math.log(1-math.pow(q,1/d)),1/c))
         return 1/a*math.pow(-math.log(1-math.pow(q,1/d)),1/c)
+    @staticmethod
+    def mle(x): #not working
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=expgenlinearexp.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'c':ret[2],'d':ret[3]}
 
 '''
 Exponentiated generalized normal distribution
@@ -1741,6 +2072,15 @@ class expgeo(Distribution):
     @staticmethod
     def ppf(l,t,q):
         return -math.log(t*(1-q)/(t*(1-q)+q))/l
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=expgeo.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'l':ret[0],'t':ret[1]}
 
 '''
 Exponentiated Kumaraswamy distribution
@@ -1775,6 +2115,15 @@ class expkumaraswamydagum(Distribution): #exponentiated kumaraswamy-dagum
     @staticmethod
     def ppf(a,d,l,p,t,q):
         return math.pow(l,1/d)*math.pow(math.pow(1-math.pow((1-math.pow(q,1/t)),1/p),-1/a)-1,-1/d)
+    @staticmethod
+    def mle(x): #not working
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=expkumaraswamydagum.pdf(args_[0],args_[1],args_[2],args_[3],args_[4],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'d':ret[1],'l':ret[2],'p':ret[3],'t':ret[4]}
 
 '''
 Exponentiated Kumaraswamy-inverse Weibull distribution
@@ -1785,7 +2134,7 @@ class expkumaraswamyinvweibull(Distribution):
         return a/math.pow(-math.log(math.pow(1-math.pow(1-math.pow(rg0(),1/t),1/e),1/l)),1/b)
     @staticmethod
     def pdf(a,b,e,l,t,x):
-        b*l*t*e*math.pow(a,b)*math.pow(x,-b-1)*math.exp(-l*math.pow(a/x,b))*math.pow(1-math.exp(-l*math.pow(a/x,b)),e-1)
+        return b*l*t*e*math.pow(a,b)*math.pow(x,-b-1)*math.exp(-l*math.pow(a/x,b))*math.pow(1-math.exp(-l*math.pow(a/x,b)),e-1)
     @staticmethod
     def cdf(a,b,e,l,t,x):
         return math.pow(1-math.pow(1-math.exp(-l*math.pow(a/x,b)),e),t)
@@ -1796,13 +2145,14 @@ class expkumaraswamyinvweibull(Distribution):
     def ppf(a,b,e,l,t,q):
         return a/math.pow(-math.log(math.pow(1-math.pow(1-math.pow(q,1/t),1/e),1/l)),1/b)
     @staticmethod
-    def mle(x):
-        #args_ -a,b,l,e,t
-        n=size(x)
-        args0=[1,1,1,1,1]
-        func= lambda args_,x,n: n*math.log(args_[1])+n*math.log(args_[3])+n*math.log(args_[4])+n*math.log(args_[3])+n*args_[1]*math.log(args_[0])-(args_[1]+1)*np.sum(np.log(np.array(x)))-args_[2]*np.sum(np.power(args_[0]/x,args_[1]))+(args_[3]-1)*np.sum(np.log(1-np.exp(-args_[2]*np.power(args_[0]/x,args_[1]))))+(args_[4]-1)*np.sum(np.log(1-np.power(1-np.exp(-args_[2]*np.power(args_[0]/x,args_[1])),args_[3])))
-        ret=op.basinhopping(func, x0)
-        return {'a':ret[0],'b':ret[1],'e':ret[3],'l':ret[2],'t':ret[4]}
+    def mle(x): #not working
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=expkumaraswamyinvweibull.pdf(args_[0],args_[1],args_[2],args_[3],args_[4],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'e':ret[2],'l':ret[3],'t':ret[4]}
 
 '''
 Exponential-logistic distribution
@@ -1811,69 +2161,88 @@ class explog(Distribution): #exponentiated logistic
     @staticmethod
     def pdf(p,bb,x):
         if(p<=0 or p>=1):
-            raise InvalidInputError("p must be between 0 and 1 exclusive")
+            raise ValueError("p must be between 0 and 1 exclusive")
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         if(x<0):
-            raise InvalidInputError("x must be non-negative")
+            raise ValueError("x must be non-negative")
         return 1/(-math.log(p))*(bb*(1-p)*math.exp(-bb*x))/(1-(1-p)*math.exp(-bb*x))
     @staticmethod
     def cdf(p,bb,x):
         if(p<=0 or p>=1):
-            raise InvalidInputError("p must be between 0 and 1 exclusive")
+            raise ValueError("p must be between 0 and 1 exclusive")
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         if(x<0):
-            raise InvalidInputError("x must be non-negative")
+            raise ValueError("x must be non-negative")
         return 1-math.log(1-(1-p)*math.exp(-bb*x))/math.log(p)
     @staticmethod
     def random(p,bb):
         if(p<=0 or p>=1):
-            raise InvalidInputError("p must be between 0 and 1 exclusive")
+            raise ValueError("p must be between 0 and 1 exclusive")
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         return 1/bb * math.log((1-p)/(1-math.pow(p,r.random())))
     @staticmethod
     def median(p,bb):
         if(p<=0 or p>=1):
-            raise InvalidInputError("p must be between 0 and 1 exclusive")
+            raise ValueError("p must be between 0 and 1 exclusive")
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         return math.log(1+math.sqrt(p))/bb
     @staticmethod
     def mode(p,bb):
         if(p<=0 or p>=1):
-            raise InvalidInputError("p must be between 0 and 1 exclusive")
+            raise ValueError("p must be between 0 and 1 exclusive")
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         return 0
     @staticmethod
     def ppf(p,bb,q):
         if(p<=0 or p>=1):
-            raise InvalidInputError("p must be between 0 and 1 exclusive")
+            raise ValueError("p must be between 0 and 1 exclusive")
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         return 1/bb * math.log((1-p)/(1-math.pow(p,q)))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=explog.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(0.5,1),method='Nelder-Mead').x.tolist()
+        return {'p':ret[0],'bb':ret[1]}
 
 '''
 Exponential-Lomax distribution
 '''
 class explomax(Distribution): #exponential lomax
     @staticmethod
-    def random(a,b,g):
+    def random(a,b,l):
         return b*(math.pow(-math.log(1-rg0())/l,1/a)-1)
     @staticmethod
-    def pdf(a,b,g,x):
+    def pdf(a,b,l,x):
         return a*l/b*math.pow(b/(x+b),-a+1)*math.exp(-l*math.pow(b/(x+b),-a))
     @staticmethod
-    def cdf(a,b,g,x):
+    def cdf(a,b,l,x):
         return 1-math.exp(-l*math.pow(b/(x+b),-a))
     @staticmethod
-    def median(a,b,g):
+    def median(a,b,l):
         return b*(math.pow(-math.log(1/2)/l,1/a)-1)
     @staticmethod
-    def ppf(a,b,g,q):
+    def ppf(a,b,l,q):
         return b*(math.pow(-math.log(1-q)/l,1/a)-1)
+    @staticmethod
+    def mle(x): #not working
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=explomax.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'l':ret[2]}
+
 
 '''
 Exponentially-modified normal distribution
@@ -1881,7 +2250,7 @@ Exponentially-modified normal distribution
 class expmodnorm(Distribution): #exponentially modified normal
     @staticmethod
     def random(mu,sigma2,lmbda):
-        return normal.random(mu,sigma2)+exp.random(lmbda)
+        return normal.random(mu,sigma2)+exponential.random(lmbda)
     @staticmethod
     def pdf(mu,lmbda,sigma2,x):
         return lmbda/2*math.exp(lmbda/2*(2*mu+lmbda*sigma2-2*x))*math.erfc((mu+lmbda*sigma2-x)/(math.sqrt(2*sigma2)))
@@ -1905,6 +2274,16 @@ class expmodnorm(Distribution): #exponentially modified normal
     @staticmethod
     def skewness(mu,lmbda,sigma2):
         return 2/math.pow(sigma2*lmbda**2,3/2)*math.pow(1+1/(sigma2*lmbda**2),-3/2)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=expmodnorm.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'mu':ret[0],'lambda':ret[1],'sigma2':ret[2]}
+
 
 '''
 Exponential-normal distribution
@@ -1912,7 +2291,7 @@ Exponential-normal distribution
 class expnorm(Distribution): #exponential normal
     @staticmethod
     def random(k):
-        return st.exponnorm.rvs(K)
+        return st.exponnorm.rvs(k)
 
 '''
 Exponential distribution
@@ -1921,62 +2300,62 @@ class exponential(Distribution):
     @staticmethod
     def pdf(lmbda,x):
         if(x<0 or lmbda<=0):
-            raise InvalidInputError("lmbda must be bgger than 0 and x must be non-negative")
+            raise ValueError("lmbda must be bgger than 0 and x must be non-negative")
         return lmbda*math.exp(-lmbda*x)
     @staticmethod
     def cdf(lmbda,x):
         if(x<0 or lmbda<=0):
-            raise InvalidInputError("lmbda must be bgger than 0 and x must be non-negative")
+            raise ValueError("lmbda must be bgger than 0 and x must be non-negative")
         return 1-math.exp(-lmbda*x)
     @staticmethod
     def random(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bgger than 0")
+            raise ValueError("lmbda must be bgger than 0")
         return -math.log(rg0())/lmbda
     @staticmethod
     def kurtosis(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bgger than 0")
+            raise ValueError("lmbda must be bgger than 0")
         return 6
     @staticmethod
     def mean(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bgger than 0")
+            raise ValueError("lmbda must be bgger than 0")
         return 1/lmbda
     @staticmethod
     def median(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bgger than 0")
+            raise ValueError("lmbda must be bgger than 0")
         return math.log(2)/lmbda
     @staticmethod
     def mode(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bgger than 0")
+            raise ValueError("lmbda must be bgger than 0")
         return 0
     @staticmethod
     def variance(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bgger than 0")
+            raise ValueError("lmbda must be bgger than 0")
         return 1/(lmbda**2)
     @staticmethod
     def stddev(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bgger than 0")
+            raise ValueError("lmbda must be bgger than 0")
         return 1/lmbda
     @staticmethod
     def entropy(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bgger than 0")
+            raise ValueError("lmbda must be bgger than 0")
         return 1-math.log(lmbda)
     @staticmethod
     def skewness(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bgger than 0")
+            raise ValueError("lmbda must be bgger than 0")
         return 2
     @staticmethod
     def ppf(lmbda,q):
         if(lmbda<=0):
-            raise InvalidInputError("lmbda must be bgger than 0")
+            raise ValueError("lmbda must be bgger than 0")
         return -math.log(q)/lmbda
     @staticmethod
     def mle(x):
@@ -2001,6 +2380,15 @@ class exponentiatedexpbin(Distribution): #exponentiated exponential binomial
     @staticmethod
     def ppf(a,l,n,t,q):
         return -1/l*math.log(1-math.pow(1/t*(1-math.pow(1-(1-math.pow(1-t,n))*q,1/n)),1/a))
+    @staticmethod
+    def mle(x): #not working
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=exponentiatedexpbin.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,0.5,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'l':ret[1],'n':ret[2],'t':ret[3]}
 
 '''
 Exponentiated exponential-geometric distribution
@@ -2022,6 +2410,15 @@ class exponentiatedexpgeo(Distribution): #exponentiated exponential-geometric
     @staticmethod
     def ppf(a,l,t,q):
         return -math.log(1-math.pow((q*t)/(1-q+q*t),1/a))/l
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=exponentiatedexpgeo.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'l':ret[1],'t':ret[2]}
 
 '''
 Exponentiated Frechet distribution
@@ -2033,7 +2430,7 @@ class exponentiatedfrechet(Distribution):
         return s/math.pow(-math.log(1-math.pow(1-u,1/a)),1/l)
     @staticmethod
     def pdf(a,l,s,x):
-        return a*l*math.pow(s/l)/math.pow(x,-l-1)*math.pow(1-math.exp(-math.pow(s/x,l)),a-1)*math.exp(-math.pow(s/x,l))
+        return a*l*math.pow(s,l)/math.pow(x,-l-1)*math.pow(1-math.exp(-math.pow(s/x,l)),a-1)*math.exp(-math.pow(s/x,l))
     @staticmethod
     def cdf(a,l,s,x):
         return 1-math.pow(1-math.exp(-math.pow(s/x,l)),a)
@@ -2043,6 +2440,15 @@ class exponentiatedfrechet(Distribution):
     @staticmethod
     def ppf(a,l,s,q):
         return s/math.pow(-math.log(1-math.pow(1-q,1/a)),1/l)
+    @staticmethod
+    def mle(x): #not working
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=exponentiatedfrechet.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'l':ret[1],'s':ret[2]}
 
 '''
 Exponentiated Gompertz distribution
@@ -2080,28 +2486,37 @@ Exponentiated Lomax-Poisson distribution
 '''
 class exponentiatedlomaxpoisson(Distribution):
     @staticmethod
-    def random(a,b,g,l):
+    def random(a,b,g,l):#bad
         u=rg0()
         return (math.pow(-math.pow(-math.log(-u*(math.exp(l)-1)+math.exp(l))/l,1/a)+1,-1/g)-1)/b
     @staticmethod
-    def pdf(a,b,g,l,x):
-        return l*a*g*b*math.exp(l)*math.pow(1-math.pow(1+b*x,-g),a-1)*math.exp(-l*math.pow(1-math.pow(1+b*x,-y),a))/((math.exp(l)-1)*math.pow(1+b*x,g+1))
+    def pdf(a,b,g,l,x): #bad?
+        return l*a*g*b*math.exp(l)*math.pow(1-math.pow(1+b*x,-g),a-1)*math.exp(-l*math.pow(1-math.pow(1+b*x,-g),a))/((math.exp(l)-1)*math.pow(1+b*x,g+1))
     @staticmethod
-    def cdf(a,b,g,l,x):
+    def cdf(a,b,g,l,x): #bad?
         return math.exp(l)*(1-math.exp(-l*math.pow(1-math.pow(1+b*x,-g),a)))/(math.exp(l)-1)
     @staticmethod
-    def median(a,b,g,l):
+    def median(a,b,g,l):#bad?
         return (math.pow(-math.pow(-math.log((math.exp(l)/2-1)+math.exp(l))/l,1/a)+1,-1/g)-1)/b
     @staticmethod
-    def ppf(a,b,g,l,q):
+    def ppf(a,b,g,l,q):#bad?
         return (math.pow(-math.pow(-math.log(-q*(math.exp(l)-1)+math.exp(l))/l,1/a)+1,-1/g)-1)/b
+    @staticmethod
+    def mle(x): #not working
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=exponentiatedlomaxpoisson.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'g':ret[2],'l':ret[3]}
 
 '''
 Exponentiated modified Weibull extension distribution
 '''
 class exponentiatedmodweibullext(Distribution): #exponentiated modified weibull extension
     @staticmethod
-    def random(a,b,g,l):
+    def random(a,b,g,l): #bad
         return a*math.pow(-math.log(1-1/(a*l)*math.log(1-math.pow(rg0(),1/g))),a/b)
     @staticmethod
     def pdf(a,b,g,l,x):
@@ -2115,6 +2530,16 @@ class exponentiatedmodweibullext(Distribution): #exponentiated modified weibull 
     @staticmethod
     def ppf(a,b,g,l,q):
         return a*math.pow(-math.log(1-1/(a*l)*math.log(1-math.pow(q,1/g))),a/b)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=exponentiatedmodweibullext.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'g':ret[2],'l':ret[3]}
+
 
 '''
 Exponentiated Weibull-exponential distribution
@@ -2135,6 +2560,15 @@ class exponentiatedweibullexp(Distribution): #exponentiated weibull exponential
     @staticmethod
     def ppf(a,c,g,q):
         return -math.log(1-math.pow(1-math.exp(-g*math.pow(-math.log(1-q),1/a)),1/c))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=exponentiatedweibullexp.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'c':ret[1],'g':ret[2]}
 
 '''
 Exponentiated Weibull-logistic distribution
@@ -2156,6 +2590,15 @@ class exponentiatedweibulllog(Distribution): #exponentiated weibull logarithmic
     @staticmethod
     def ppf(a,b,g,t,q):
         return math.pow(-math.log(1-math.pow((1-math.pow(1-t,q))/t,1/a)),1/g)/b
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=exponentiatedweibulllog.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'g':ret[2],'t':ret[3]}
 
 '''
 Exponential transmuted generalized Rayleigh distribution
@@ -2179,6 +2622,15 @@ class exptransmutedgenrayleigh(Distribution): #exponential transmuted generalize
     def ppf(a,b,d,l,q):
         i=1+l-math.sqrt((1+l)**2-4*l*math.pow(q,1/d))/(2*l)
         return math.sqrt(-math.log(1-math.pow(i,1/a)))/b
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=exptransmutedgenrayleigh.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'d':ret[2],'l':ret[3]}
 
 '''
 Exponential transmuted Weibull distribution
@@ -2202,6 +2654,15 @@ class exptransmutedweibull(Distribution): #exponential transmuted weibull
     def ppf(a,b,l,n,q):
         i=math.sqrt(1/l*(1-math.pow(q,1/n))+((1-l)/l)**2/4)
         return a*math.pow(-math.log(i-((1-l)/l)/2),1/b)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=exptransmutedweibull.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'l':ret[2],'n':ret[3]}
 
 '''
 Exponentiated Weibull distribution
@@ -2210,28 +2671,37 @@ class expweibull(Distribution): #exponentiated weibull
     @staticmethod
     def cdf(aa,k,lmbda,x):
         if(aa<=0 or k<=0 or lmbda<=0 or x<=0):
-            raise InvalidInputError("All inputs must be positive")
+            raise ValueError("All inputs must be positive")
         return math.pow(1-math.exp(-math.pow(x/lmbda,k)),aa)
     @staticmethod
     def pdf(aa,k,lmbda,x):
         if(aa<=0 or k<=0 or lmbda<=0 or x<=0):
-            raise InvalidInputError("All inputs must be positive")
+            raise ValueError("All inputs must be positive")
         return aa*(k/lmbda)*math.pow(x/lmbda,k-1)*math.pow(1-math.exp(-math.pow(x/lmbda,k)),aa-1)*math.exp(-math.pow(x/lmbda,k))
     @staticmethod
     def random(aa,k,lmbda):
         if(aa<=0 or k<=0 or lmbda<=0):
-            raise InvalidInputError("All inputs must be positive")
+            raise ValueError("All inputs must be positive")
         return aa*math.pow(-math.log(1-math.pow(r.random(),1/k)),1/lmbda)
     @staticmethod
     def median(aa,k,lmbda):
         if(aa<=0 or k<=0 or lmbda<=0):
-            raise InvalidInputError("All inputs must be positive")
+            raise ValueError("All inputs must be positive")
         return aa*math.pow(-math.log(1-math.pow(1/2,1/k)),1/lmbda)
     @staticmethod
     def ppf(aa,k,lmbda,q):
         if(aa<=0 or k<=0 or lmbda<=0):
-            raise InvalidInputError("All inputs must be positive")
+            raise ValueError("All inputs must be positive")
         return aa*math.pow(-math.log(1-math.pow(q,1/k)),1/lmbda)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=expweibull.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'aa':ret[0],'k':ret[1],'lmbda':ret[2]}
 
 '''
 Exponentiated Weibull-geometric distribution
@@ -2253,6 +2723,15 @@ class expweibullgeo(Distribution): #exponentiated weibull-geometric
     @staticmethod
     def ppf(a,b,g,t,q):
         return math.pow(-math.log(1-math.pow(q/(1-t*(1-q)),1/a)),1/g)/b
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=expweibullgeo.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'g':ret[2],'t':ret[3]}
 
 '''
 Exponentiated Weibull-Poisson distribution
@@ -2274,6 +2753,15 @@ class expweibullpoisson(Distribution): #exponentiated weibull-poisson
     @staticmethod
     def ppf(a,b,g,t,q):
         return 1/b*math.pow(-math.log(1-math.pow(1/t*math.log(q*(math.exp(t)-1)+1),1/a)),1/g)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=expweibullpoisson.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'g':ret[2],'t':ret[3]}
 
 '''
 Extended generalized exponential distribution
@@ -2304,6 +2792,15 @@ class extendedgenexp(Distribution): #extended generalized exponential
         if(b==0):
             return -(1/l)*math.ln(1-math.pow(q,1/a))
         return (1/(b*l))*(1-math.pow(1-math.pow(q,1/a),b))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=extendedgenexp.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'l':ret[2]}
 
 '''
 Extreme value distribution
@@ -2312,63 +2809,73 @@ class extremevalue(Distribution):
     @staticmethod
     def pdf(mu,sigma,x):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return 1/sigma*math.exp(-(x-mu)/sigma)*math.exp(-math.exp(-(x-mu)/sigma))
     @staticmethod
     def cdf(mu,sigma,x):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return math.exp(-(x-mu)/sigma)
     @staticmethod
     def random(mu,sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return mu-sigma*math.log(-math.log(rg0()))
     @staticmethod
     def kurtosis(mu,sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return 2.4
     @staticmethod
     def mean(mu,sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return mu+sigma*np.euler_gamma
     @staticmethod
     def median(mu,sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return mu-sigma*math.log(math.log(2))
     @staticmethod
     def mode(mu,sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return mu
     @staticmethod
     def variance(mu,sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return sigma**2*math.pi**2/6
     @staticmethod
     def stddev(mu,sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return sigma*math.pi/math.sqrt(6)
     @staticmethod
     def entropy(mu,sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return math.log(sigma)+np.euler_gamma+1
     @staticmethod
     def skewness(mu,sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
-        return 12*math.sqrt(6)*np.special.zeta(3,1)/(math.pi**3)
+            raise ValueError("sigma must be positive")
+        return 12*math.sqrt(6)*sp.zeta(3,1)/(math.pi**3)
     @staticmethod
     def ppf(mu,sigma,q):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return mu-sigma*math.log(-math.log(q))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=extremevalue.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'mu':ret[0],'sigma':ret[1]}
+
 
 '''
 Extreme value maximum distribution*
@@ -2393,42 +2900,42 @@ class f(Distribution):
     @staticmethod
     def random(d1,d2):
         if(d1<=0 or d2<=0):
-            raise InvalidInputError("All inputs must be positive")
-        return (chi2.random(n1)/n1)/(chi2.random(n2)/n2)
+            raise ValueError("All inputs must be positive")
+        return (chi2.random(d1)/d1)/(chi2.random(d2)/d2)
     @staticmethod
     def kurtosis(d1,d2):
         if(d1<=0 or d2<=0):
-            raise InvalidInputError("All inputs must be positive")
+            raise ValueError("All inputs must be positive")
         if(d2>8):
-            return 12*(d1*(5*d2-22)*(d1+d2-2)+(d**2-4)*(d**2-2)**2)/(d1*(d2-6)*(d2-8)*(d1+d2-2))
+            return 12*(d1*(5*d2-22)*(d1+d2-2)+(d2-4)*(d2-2)**2)/(d1*(d2-6)*(d2-8)*(d1+d2-2))
     @staticmethod
     def mean(d1,d2):
         if(d1<=0 or d2<=0):
-            raise InvalidInputError("All inputs must be positive")
+            raise ValueError("All inputs must be positive")
         if(d2>2):
             return d2/(d2-2)
     @staticmethod
     def mode(d1,d2):
         if(d1<=0 or d2<=0):
-            raise InvalidInputError("All inputs must be positive")
+            raise ValueError("All inputs must be positive")
         if(d1>2):
             return (d1-2)/d1*d2/(d2+2)
     @staticmethod
     def variance(d1,d2):
         if(d1<=0 or d2<=0):
-            raise InvalidInputError("All inputs must be positive")
+            raise ValueError("All inputs must be positive")
         if(d2>4):
             return (2*d2**2*(d1+d2-2))/(d1*(d2-2)**2*(d2-4))
     @staticmethod
     def stddev(d1,d2):
         if(d1<=0 or d2<=0):
-            raise InvalidInputError("All inputs must be positive")
+            raise ValueError("All inputs must be positive")
         if(d2>4):
             return math.sqrt((2*d2**2*(d1+d2-2))/(d1*(d2-2)**2*(d2-4)))
     @staticmethod
     def skewness(d1,d2):
         if(d1<=0 or d2<=0):
-            raise InvalidInputError("All inputs must be positive")
+            raise ValueError("All inputs must be positive")
         if(d2>6):
             return ((2*d1+d2-2)*math.sqrt(8*(d2-4)))/((d2-6)*math.sqrt(d1*(d1+d2-2)))
 
@@ -2456,6 +2963,24 @@ class fisherz(Distribution):
     @staticmethod
     def mode(n,m):
         return m/(m+2)*(n-2)/n
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=fisherz.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'n':ret[0],'m':ret[1]}
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=fisherz.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'n':ret[0],'m':ret[1]}
 
 '''
 Fisk distribution
@@ -2464,27 +2989,27 @@ class fisk(Distribution):
     @staticmethod
     def pdf(a,b,c,x):
         if(b<=0 or c<=0):
-            raise InvalidInputError("b and c must be bigger than 0")
+            raise ValueError("b and c must be bigger than 0")
         if(x<=a):
-            raise InvalidInputError("x must be bigger than or equal to a")
+            raise ValueError("x must be bigger than or equal to a")
         return c/b*math.pow((x-a)/b,c-1)*math.pow(1+math.pow((x-a)/b,c),-2)
     @staticmethod
     def cdf(a,b,c,x):
         if(b<=0 or c<=0):
-            raise InvalidInputError("b and c must be bigger than 0")
+            raise ValueError("b and c must be bigger than 0")
         if(x<=a):
-            raise InvalidInputError("x must be bigger than or equal to a")
-        return 1/(1+math.pow((y-a)/b,-c))
+            raise ValueError("x must be bigger than or equal to a")
+        return 1/(1+math.pow((x-a)/b,-c))
     @staticmethod
     def random(a,b,c):
         if(b<=0 or c<=0):
-            raise InvalidInputError("b and c must be bigger than 0")
+            raise ValueError("b and c must be bigger than 0")
         u=r.random()
         return a+b*math.pow(u/(1-u),1/c)
     @staticmethod
     def kurtosis(a,b,c):
         if(b<=0 or c<=0):
-            raise InvalidInputError("b and c must be bigger than 0")
+            raise ValueError("b and c must be bigger than 0")
         if(c>4):
             p=math.pi/c
             return -3*(p*b*math.csc(p))**4+12*b*((p*b)**3)*math.csc(p)**2*math.csc(2*p)-12*(p**2)*(b**4)*math.csc(p)*math.csc(3*p)+4**p*(b**4)*math.csc(4*p)
@@ -2492,46 +3017,57 @@ class fisk(Distribution):
     @staticmethod
     def mean(a,b,c):
         if(b<=0 or c<=0):
-            raise InvalidInputError("b and c must be bigger than 0")
+            raise ValueError("b and c must be bigger than 0")
         if(c>1):
             return a+math.pi*b/c*math.csc(math.pi/c)
         return None
     @staticmethod
     def median(a,b,c):
         if(b<=0 or c<=0):
-            raise InvalidInputError("b and c must be bigger than 0")
+            raise ValueError("b and c must be bigger than 0")
         return a+b
     @staticmethod
     def mode(a,b,c):
         if(b<=0 or c<=0):
-            raise InvalidInputError("b and c must be bigger than 0")
+            raise ValueError("b and c must be bigger than 0")
         return a+b*math.pow((c-1)/(c+1),1/c)
     @staticmethod
     def variance(a,b,c):
         if(b<=0 or c<=0):
-            raise InvalidInputError("b and c must be bigger than 0")
+            raise ValueError("b and c must be bigger than 0")
         if(c>2):
             return 2*math.pi*(b**2)/c*math.csc(2*math.pi/c)-(math.pi**2)*(b**2)/(c**2)*(math.csc(math.pi/c)**2)
         return None
     @staticmethod
     def stddev(a,b,c):
         if(b<=0 or c<=0):
-            raise InvalidInputError("b and c must be bigger than 0")
+            raise ValueError("b and c must be bigger than 0")
         if(c>2):
             return math.sqrt(2*math.pi*(b**2)/c*math.csc(2*math.pi/c)-(math.pi**2)*(b**2)/(c**2)*(math.csc(math.pi/c)**2))
         return None
     @staticmethod
     def skewness(a,b,c):
         if(b<=0 or c<=0):
-            raise InvalidInputError("b and c must be bigger than 0")
+            raise ValueError("b and c must be bigger than 0")
         if(c>3):
             return (2*math.pi/c*math.csc(math.pi/c))**3-6*b*(math.pi*b/c)**2*math.csc(math.pi/c)*math.csc(2*math.pi/c)+3*math.pi*(b**3)/c*math.csc(3*math.pi/c)
         return None
     @staticmethod
     def ppf(a,b,c,q):
         if(b<=0 or c<=0):
-            raise InvalidInputError("b and c must be bigger than 0")
+            raise ValueError("b and c must be bigger than 0")
         return a+b*math.pow(q/(1-q),1/c)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=fisk.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(min(x)-1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'c':ret[2]}
+
+
 
 '''
 Friemer, Mudholkar, Kollia, and Lin generalized Tukey-lambda distribution
@@ -2543,9 +3079,9 @@ class fmlkl(Distribution): #Friemer, Mudholkar, Kollia, and Lin generalized tuke
         return l1+(1/l2)*((math.pow(n,l3)-1)/l3-((math.pow(1-n,l4)-1)/l4))
     @staticmethod
     def median(l1,l2,l3,l4):
-        return l1+(1/l2)*((math.pow(1/2,l3)-1)/l3-((math.pow(1-n,l4)-1)/l4))
+        return l1+(1/l2)*((math.pow(1/2,l3)-1)/l3-((math.pow(0.5,l4)-1)/l4))
     @staticmethod
-    def quantile(l1,l2,l3,l4,q):
+    def ppf(l1,l2,l3,l4,q):
         return l1+(1/l2)*((math.pow(q,l3)-1)/l3-((math.pow(1-q,l4)-1)/l4))
 
 '''
@@ -2567,6 +3103,15 @@ class foldednormal(Distribution):
     def mean(m,s):
         c=abs(m)/s
         return math.sqrt(2/math.pi)*math.exp(-c**2/2)+c*math.erf(c/math.sqrt(2))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=foldednormal.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'m':ret[0],'s':ret[1]}
 
 '''
 Frechet distribution
@@ -2575,43 +3120,52 @@ class frechet(Distribution):
     @staticmethod
     def pdf(aa,m,s,x):
         if(aa<=0 or s<=0):
-            raise InvalidInputError("aa and s must be positive")
+            raise ValueError("aa and s must be positive")
         if(x<=m):
-            raise InvalidInputError("x must be bigger than m")
+            raise ValueError("x must be bigger than m")
         return aa/s*math.pow((x-m)/s,-1-aa)*math.exp(-math.pow((x-m)/s,-aa))
     @staticmethod
     def cdf(aa,m,s,x):
         if(aa<=0 or s<=0):
-            raise InvalidInputError("aa and s must be positive")
+            raise ValueError("aa and s must be positive")
         if(x<=m):
-            raise InvalidInputError("x must be bigger than m")
+            raise ValueError("x must be bigger than m")
         return math.exp(-math.pow((x-m)/s,-aa))
     @staticmethod
     def random(aa,m,s):
         if(aa<=0 or s<=0):
-            raise InvalidInputError("aa and s must be positive")
+            raise ValueError("aa and s must be positive")
         n=rg0()
         return -math.pow(math.log(n),-1/aa)*(m*math.pow(-math.log(n),1/aa)+s)
     @staticmethod
     def median(aa,m,s):
         if(aa<=0 or s<=0):
-            raise InvalidInputError("aa and s must be positive")
+            raise ValueError("aa and s must be positive")
         return m+s/math.pow(math.log(2),1/aa)
     @staticmethod
     def mode(aa,m,s):
         if(aa<=0 or s<=0):
-            raise InvalidInputError("aa and s must be positive")
+            raise ValueError("aa and s must be positive")
         return m+s*math.pow(aa/(1+aa),1/aa)
     @staticmethod
     def entropy(aa,m,s):
         if(aa<=0 or s<=0):
-            raise InvalidInputError("aa and s must be positive")
+            raise ValueError("aa and s must be positive")
         return 1+np.euler_gamma/aa+np.euler_gamma+math.log(s/aa)
     @staticmethod
     def ppf(aa,m,s,q):
         if(aa<=0 or s<=0):
-            raise InvalidInputError("aa and s must be positive")
+            raise ValueError("aa and s must be positive")
         return -math.pow(math.log(q),-1/aa)*(m*math.pow(-math.log(q),1/aa)+s)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=frechet.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'aa':ret[0],'m':ret[1],'s':ret[2]}
 
 '''
 Gamma distribution
@@ -2650,6 +3204,15 @@ class gamma(Distribution):
     @staticmethod
     def skewness(k,t):
         return 2/math.sqrt(k)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=gamma.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'k':ret[0],'t':ret[1]}
 
 '''
 Gamma-exponential distribution*
@@ -2665,7 +3228,7 @@ Gamma-shifted Gompertz distribution
 class gammashiftedgompertz(Distribution):
     @staticmethod
     def random(b,aa,bb):
-        return max(exp.random(b),b-gamma.random(aa,bb)*math.log(-math.log(r.random())))
+        return max(exponential.random(b),b-gamma.random(aa,bb)*math.log(-math.log(r.random())))
 
 '''
 G and H distribution
@@ -2693,16 +3256,20 @@ class gausshyper(Distribution):
 '''
 Gauss-Kuzmin distribution*
 '''
+'''
 class gausskuzmin(Distribution):
     @staticmethod
     def random():
         a=r.random()
         i=1
+        print(a)
         while True:
+            print(1-math.log(1-1/((1+i)**2),2))
             if(a<1-math.log(1-1/((1+i)**2),2)):
                 i+=1
             else:
                 return i
+'''
 
 '''
 Generalized beta prime distribution*
@@ -2753,6 +3320,15 @@ class genexppoisson(Distribution): #generalized exponentiated poisson
     @staticmethod
     def ppf(a,b,l,q):
         return -math.log(1+math.log(1-math.pow(q,1/a)*(1-math.exp(-l)))/l)/b
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=genexppoisson.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'l':ret[2]}
 
 '''
 Generalized extreme value distribution
@@ -2763,11 +3339,11 @@ class genextremevalue(Distribution):
         if(xi==0):
             return extremevalue.pdf(mu,sigma,x)
         if(xi>0 and x<mu-sigma/xi):
-            raise InvalidInputError("x must be bigger than or equal to mu-sigma/xi")
+            raise ValueError("x must be bigger than or equal to mu-sigma/xi")
         if(xi<0 and x>mu-sigma/xi):
-            raise InvalidInputError("x must be less than or equal to mu-sigma/xi")
+            raise ValueError("x must be less than or equal to mu-sigma/xi")
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         t=math.pow(1+xi*(x-mu)/sigma,-1/xi)
         return 1/sigma*math.pow(t,xi+1)*math.exp(t)
     @staticmethod
@@ -2775,11 +3351,11 @@ class genextremevalue(Distribution):
         if(xi==0):
             return extremevalue.cdf(mu,sigma,x)
         if(xi>0 and x<mu-sigma/xi):
-            raise InvalidInputError("x must be bigger than or equal to mu-sigma/xi")
+            raise ValueError("x must be bigger than or equal to mu-sigma/xi")
         if(xi<0 and x>mu-sigma/xi):
-            raise InvalidInputError("x must be less than or equal to mu-sigma/xi")
+            raise ValueError("x must be less than or equal to mu-sigma/xi")
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         t=math.pow(1+xi*(x-mu)/sigma,-1/xi)
         return math.exp(-t)
     @staticmethod
@@ -2787,14 +3363,14 @@ class genextremevalue(Distribution):
         if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return mu+sigma*(math.pow(math.log(1/rg0()),-xi)-1)/xi
     @staticmethod
     def kurtosis(mu,sigma,xi):
         if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         if(xi>=1/4):
             return float("infinity")
         return (math.gamma(1-4*xi)-4*math.gamma(1-xi)*math.gamma(1-3*xi)+6*math.gamma(1-2*xi)*(math.gamma(1-xi)**2)-3*(math.gamma(1-xi)**4))/math.pow(math.gamma(1-2*xi)-math.gamma(1-xi)**2,2)-3
@@ -2803,7 +3379,7 @@ class genextremevalue(Distribution):
         if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         if(xi>=1):
             return float("infinity")
         return mu+sigma*(math.gamma(1-xi)-1)/xi
@@ -2812,21 +3388,21 @@ class genextremevalue(Distribution):
         if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return mu+sigma*(math.pow(math.log(2),-xi)-1)/xi
     @staticmethod
     def mode(mu,sigma,xi):
         if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return mu+sigma*(math.pow(1+xi,-xi)-1)/xi
     @staticmethod
     def variance(mu,sigma,xi):
         if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         if(xi>=1/2):
             return float("infinity")
         return sigma**2*(math.gamma(1-2*xi)-math.gamma(1-xi)**2)/xi**2
@@ -2835,7 +3411,7 @@ class genextremevalue(Distribution):
         if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         if(xi>=1/2):
             return float("infinity")
         return sigma/xi*math.sqrt(math.gamma(1-2*xi)-math.gamma(1-xi)**2)
@@ -2844,14 +3420,14 @@ class genextremevalue(Distribution):
         if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return math.log(sigma)+np.euler_gamma*(xi+1)+1
     @staticmethod
     def skewness(mu,sigma,xi):
         if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         if(xi>=1/3):
             return float("infinity")
         return (abs(xi)/xi)*(math.gamma(1-3*xi)-3*math.gamma(1-xi)*math.gamma(1-2*xi)+2*math.gamma(1-xi)**3)/math.pow(math.gamma(1-2*xi)-math.gamma(1-xi)**2,3/2)
@@ -2860,8 +3436,17 @@ class genextremevalue(Distribution):
         if(xi==0):
             return extremevalue.random(mu,sigma)
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return mu+sigma*(math.pow(math.log(1/q),-xi)-1)/xi
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=explog.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'mu':ret[0],'sigma':ret[1],'xi':ret[2]}
 
 '''
 Generalized gamma distribution
@@ -2890,6 +3475,15 @@ class gengompertz(Distribution): #generalized gompertz
     @staticmethod
     def ppf(c,l,t,q):
         return math.log(1-c/l*math.log(1-math.pow(q,t)))/c
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=gengompertz.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'c':ret[0],'l':ret[1],'t':ret[2]}
 
 '''
 Generalized Gumbel distribution*
@@ -2908,7 +3502,7 @@ class geninvgenexp(Distribution): #generalized inverse generalized exponential
         return l*g/(math.log(1-math.pow(1-rg0(),1/a)))
     @staticmethod
     def pdf(a,g,l,x):
-        return a*l*g*math.pow(x,-2)*math.exp(-g*l/x)*math.pow(1-math.exp(-y*l/x),a-1)
+        return a*l*g*math.pow(x,-2)*math.exp(-g*l/x)*math.pow(1-math.exp(-g*l/x),a-1)
     @staticmethod
     def cdf(a,g,l,x):
         return 1-math.pow(1-math.exp(-g*l/x),a)
@@ -2918,6 +3512,15 @@ class geninvgenexp(Distribution): #generalized inverse generalized exponential
     @staticmethod
     def ppf(a,g,l,q):
         return l*g/(math.log(1-math.pow(1-q,1/a)))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=geninvgenexp.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'g':ret[1],'l':ret[2]}
 
 '''
 Generalized inverse Weibull distribution
@@ -2938,6 +3541,15 @@ class geninvweibull(Distribution):
     @staticmethod
     def ppf(a,b,g,q):
         return a*math.pow(-math.log(q)/g,-1/b)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=geninvweibull.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'g':ret[2]}
 
 '''
 Generalized inverted exponential distribution
@@ -2958,6 +3570,15 @@ class geninvexp(Distribution):
     @staticmethod
     def ppf(a,l,q):
         return -l/math.log(1-math.pow(1-q,1/a))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=geninvexp.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'l':ret[1]}
 
 '''
 Generalized lambda distribution
@@ -2971,7 +3592,7 @@ class genlambda(Distribution):
     def median(l1,l2,l3,l4):
         return l1+(math.pow(1/2,l3)-math.pow(1/2,l4))/l2
     @staticmethod
-    def quantile(l1,l2,l3,l4,q):
+    def ppf(l1,l2,l3,l4,q):
         return l1+(math.pow(q,l3)-math.pow((1-q),l4))/l2
 
 '''
@@ -3024,6 +3645,15 @@ class genlogistic(Distribution): #generalized logistic
     @staticmethod
     def ppf(aa,mu,sigma,q):
         return mu-sigma*math.log((1-math.pow(q,aa))/math.pow(q,aa))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=genlogistic.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'aa':ret[0],'mu':ret[1],'sigma':ret[2]}
 
 '''
 Generalized logistic V distribution*
@@ -3037,7 +3667,7 @@ class genlogistic5(Distribution): #generalized logistic V
         z=(x-mu)/sigma
         return math.pow(1-aa*z,(1/aa)-1)/(1+math.pow(1-aa*z,1/aa))**2
     @staticmethod
-    def cdf(aa,x):
+    def cdf(aa,mu,sigma,x):
         z=(x-mu)/sigma
         return 1/(1+math.pow(1-aa*z,1/aa))
     @staticmethod
@@ -3046,6 +3676,15 @@ class genlogistic5(Distribution): #generalized logistic V
     @staticmethod
     def ppf(aa,mu,sigma,q):
         return mu+sigma*(1/aa)*(1-math.pow(1/q-1,aa))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=genlogistic5.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'aa':ret[0],'mu':ret[1],'sigma':ret[2]}
 
 '''
 Generalized odd log-logistic distribution
@@ -3061,6 +3700,15 @@ class genoddloglogistic(Distribution): #generalized odd log-logistic
     @staticmethod
     def ppf(a,t,q):
         return math.pow(math.pow(q/(1-q),1/a)/(1+math.pow(q/(1-q),1/a)),1/t)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=genoddloglogistic.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'t':ret[1]}
 
 '''
 Generalized Pareto distribution
@@ -3069,80 +3717,89 @@ class genpareto(Distribution):
     @staticmethod
     def pdf(mu,sigma,xi,x):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be greater than 0")
+            raise ValueError("sigma must be greater than 0")
         if(x<mu and xi>=0):
-            raise InvalidInputError("x must be bigger than or equal to mu")
+            raise ValueError("x must be bigger than or equal to mu")
         if(xi<0 and (x<mu or x>(mu-sigma/xi))):
-            raise InvalidInputError("x must be between mu and mu-sigma/xi")
+            raise ValueError("x must be between mu and mu-sigma/xi")
         return 1/sigma*math.pow(1+xi*(x-mu)/sigma,-1/xi+1)
     @staticmethod
     def cdf(mu,sigma,xi,x):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be greater than 0")
+            raise ValueError("sigma must be greater than 0")
         if(x<mu and xi>=0):
-            raise InvalidInputError("x must be bigger than or equal to mu")
+            raise ValueError("x must be bigger than or equal to mu")
         if(xi<0 and (x<mu or x>(mu-sigma/xi))):
-            raise InvalidInputError("x must be between mu and mu-sigma/xi")
+            raise ValueError("x must be between mu and mu-sigma/xi")
         return 1-math.pow(1+xi*(x-mu)/sigma,-1/xi)
     @staticmethod
     def random(mu,sigma,xi):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be greater than 0")
+            raise ValueError("sigma must be greater than 0")
         if(xi==0):
             return mu-sigma*math.log(rg0())
         return mu+(sigma*(math.pow(rg0(),-xi)-1)/xi)
     @staticmethod
     def kurtosis(mu,sigma,xi):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be greater than 0")
+            raise ValueError("sigma must be greater than 0")
         if(xi<1/4):
             return 3*(1-2*xi)*(2*(xi**2)+xi+3)/((1-3*xi)*(1-4*xi))-3
         return None
     @staticmethod
     def mean(mu,sigma,xi):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be greater than 0")
+            raise ValueError("sigma must be greater than 0")
         if(xi<1):
             return mu+sigma/(1+xi)
         return None
     @staticmethod
     def median(mu,sigma,xi):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be greater than 0")
+            raise ValueError("sigma must be greater than 0")
         return mu+sigma*(math.pow(2,xi)-1)/xi
     @staticmethod
     def variance(mu,sigma,xi):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be greater than 0")
+            raise ValueError("sigma must be greater than 0")
         if(xi<1/2):
             return sigma**2/((1-xi)**2*(1-2*xi))
         return None
     @staticmethod
     def stddev(mu,sigma,xi):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be greater than 0")
+            raise ValueError("sigma must be greater than 0")
         if(xi<1/2):
             return sigma/math.sqrt((1-xi)**2*(1-2*xi))
         return None
     @staticmethod
     def entropy(mu,sigma,xi):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be greater than 0")
+            raise ValueError("sigma must be greater than 0")
         return math.log(sigma)+xi+1
     @staticmethod
     def skewness(mu,sigma,xi):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be greater than 0")
+            raise ValueError("sigma must be greater than 0")
         if(xi<1/3):
             return 2*(1+xi)*math.sqrt(1-2*xi)/(1-3*xi)
         return None
     @staticmethod
     def ppf(mu,sigma,xi,q):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be greater than 0")
+            raise ValueError("sigma must be greater than 0")
         if(xi==0):
             return mu-sigma*math.log(rg0())
         return mu+(sigma*(math.pow(q,-xi)-1)/xi)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=genpareto.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'mu':ret[0],'sigma':ret[1],'xi':ret[2]}
 
 '''
 Generalized Pearson VII distribution*
@@ -3163,10 +3820,10 @@ class genrayleigh(Distribution):
     def random(a,l):
         return math.sqrt(-math.log(1-math.pow(rg0(),1/a)))/l
     @staticmethod
-    def pdf(a,l):
+    def pdf(a,l,x):
         return 2*a*l**2*x*math.exp(-(l*x)**2)*math.pow(1-math.exp(-(l*x)**2),a-1)
     @staticmethod
-    def cdf(a,l):
+    def cdf(a,l,x):
         return math.pow(1-math.exp(-(l*x)**2),a)
     @staticmethod
     def median(a,l):
@@ -3174,6 +3831,15 @@ class genrayleigh(Distribution):
     @staticmethod
     def ppf(a,l,q):
         return math.sqrt(-math.log(1-math.pow(q,1/a)))/l
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=genrayleigh.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'aa':ret[0],'mu':ret[1]}
 
 '''
 Generalized Topp-Leone distribution
@@ -3200,6 +3866,15 @@ class gentoppleone(Distribution): #generalized topp-leone
         if(aa==1):
             return math.pow(q,1/bb)
         return (-aa+math.sqrt(math.pow(aa,2)-4*(1-aa)*(-math.pow(q,1/bb))))/(2-2*aa)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=gentoppleone.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'aa':ret[0],'bb':ret[1]}
 
 '''
 Generalized Tukey-lambda distribution*
@@ -3238,11 +3913,11 @@ class genweibullexp(Distribution): #generalized weibull-exponential
     def random(a,c,t,g):
         return -math.log(1-math.pow(1-math.exp(math.pow(-math.log(1-t*rg0())/g,1/a)),1/c))
     @staticmethod
-    def pdf(a,c,g,t,x):
+    def pdf(a,c,t,g,x):
         z=1-math.exp(-t*x)
         return c*a/g*t*math.exp(-t*x)*math.pow(z,c-1)/(1-math.pow(z,c))*math.pow(-math.log(1-math.pow(z,c))/g,a-1)*math.pow(math.exp-(-math.log(1-math.pow(1-math.exp(-t*x),c))/g),a)
     @staticmethod
-    def cdf(a,c,g,t,x):
+    def cdf(a,c,t,g,x):
         return 1-math.pow(math.exp-(-math.log(1-math.pow(1-math.exp(-t*x),c))/g),a)
     @staticmethod
     def median(a,c,t,g):
@@ -3250,6 +3925,16 @@ class genweibullexp(Distribution): #generalized weibull-exponential
     @staticmethod
     def ppf(a,c,t,g,q):
         return -math.log(1-math.pow(1-math.exp(math.pow(-math.log(1-t*q)/g,1/a)),1/c))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=genweibullexp.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'c':ret[1],'t':ret[2],'g':ret[3]}
+
 
 '''
 Geometric distribution
@@ -3258,66 +3943,66 @@ class geometric(Distribution):
     @staticmethod
     def pdf(p,k):
         if(p<=0 or p>1):
-            raise InvalidInputError("p must be greater than zero and less than or equal to 1")
+            raise ValueError("p must be greater than zero and less than or equal to 1")
         if(k%1!=0 or k<1):
-            raise InvalidInputError("k must be a positive integer")
+            raise ValueError("k must be a positive integer")
         return math.pow(1-p,k-1)*p
     @staticmethod
     def cdf(p,k):
         if(p<=0 or p>1):
-            raise InvalidInputError("p must be greater than zero and less than or equal to 1")
+            raise ValueError("p must be greater than zero and less than or equal to 1")
         if(k%1!=0 or k<1):
-            raise InvalidInputError("k must be a positive integer")
+            raise ValueError("k must be a positive integer")
         return 1-math.pow(1-p,k)
     @staticmethod
     def random(p):
         if(p<=0 or p>1):
-            raise InvalidInputError("p must be greater than zero and less than or equal to 1")
+            raise ValueError("p must be greater than zero and less than or equal to 1")
         return math.floor(math.log(rg0())/math.log(1-p))
     @staticmethod
     def kurtosis(p):
         if(p<=0 or p>1):
-            raise InvalidInputError("p must be greater than zero and less than or equal to 1")
+            raise ValueError("p must be greater than zero and less than or equal to 1")
         return 6+(p**2)/(1-p)
     @staticmethod
     def mean(p):
         if(p<=0 or p>1):
-            raise InvalidInputError("p must be greater than zero and less than or equal to 1")
+            raise ValueError("p must be greater than zero and less than or equal to 1")
         return 1/p
     @staticmethod
     def median(p):
         if(p<=0 or p>1):
-            raise InvalidInputError("p must be greater than zero and less than or equal to 1")
+            raise ValueError("p must be greater than zero and less than or equal to 1")
         return math.ceil(-1/math.log(1-p,2))
     @staticmethod
     def mode(p):
         if(p<=0 or p>1):
-            raise InvalidInputError("p must be greater than zero and less than or equal to 1")
+            raise ValueError("p must be greater than zero and less than or equal to 1")
         return 1
     @staticmethod
     def variance(p):
         if(p<=0 or p>1):
-            raise InvalidInputError("p must be greater than zero and less than or equal to 1")
+            raise ValueError("p must be greater than zero and less than or equal to 1")
         return (1-p)/(p**2)
     @staticmethod
     def stddev(p):
         if(p<=0 or p>1):
-            raise InvalidInputError("p must be greater than zero and less than or equal to 1")
+            raise ValueError("p must be greater than zero and less than or equal to 1")
         return math.sqrt(1-p)/p
     @staticmethod
     def entropy(p):
         if(p<=0 or p>1):
-            raise InvalidInputError("p must be greater than zero and less than or equal to 1")
+            raise ValueError("p must be greater than zero and less than or equal to 1")
         return (-(1-p)*math.log(1-p,2)-p*math.log(p,2))/p
     @staticmethod
     def skewness(p):
         if(p<=0 or p>1):
-            raise InvalidInputError("p must be greater than zero and less than or equal to 1")
+            raise ValueError("p must be greater than zero and less than or equal to 1")
         return (2-p)/math.sqrt(1-p)
     @staticmethod
     def ppf(p,q):
         if(p<=0 or p>1):
-            raise InvalidInputError("p must be greater than zero and less than or equal to 1")
+            raise ValueError("p must be greater than zero and less than or equal to 1")
         return math.floor(math.log(q)/math.log(1-p))
     @staticmethod
     def mle(x):
@@ -3341,32 +4026,41 @@ class gompertz(Distribution):
     @staticmethod
     def pdf(eta,b,x):
         if(eta<=0 or b<=0):
-            raise InvalidInputError("eta and b must be positive")
+            raise ValueError("eta and b must be positive")
         if(x<0):
-            raise InvalidInputError("x must be non-negative")
+            raise ValueError("x must be non-negative")
         return b*eta*math.exp(b*x)*math.exp(eta)*math.exp(-eta*math.exp(b*x))
     @staticmethod
     def cdf(eta,b,x):
         if(eta<=0 or b<=0):
-            raise InvalidInputError("eta and b must be positive")
+            raise ValueError("eta and b must be positive")
         if(x<0):
-            raise InvalidInputError("x must be non-negative")
+            raise ValueError("x must be non-negative")
         return 1-math.exp(-eta*(math.exp(b*x)-1))
     @staticmethod
     def random(eta,b):
         if(eta<=0 or b<=0):
-            raise InvalidInputError("eta and b must be positive")
+            raise ValueError("eta and b must be positive")
         return math.log((-math.log(1-r.random())/eta)+1)/b
     @staticmethod
     def median(eta,b):
         if(eta<=0 or b<=0):
-            raise InvalidInputError("eta and b must be positive")
+            raise ValueError("eta and b must be positive")
         return (1/b)*math.log(math.log(1/2)/eta+1)
     @staticmethod
     def ppf(eta,b,q):
         if(eta<=0 or b<=0):
-            raise InvalidInputError("eta and b must be positive")
+            raise ValueError("eta and b must be positive")
         return math.log((-math.log(1-q)/eta)+1)/b
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=gompertz.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'eta':ret[0],'b':ret[1]}
 
 '''
 Gompertz-Makeham distribution*
@@ -3390,64 +4084,73 @@ class gumbel(Distribution):
     @staticmethod
     def pdf(mu,bb,x):
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         z=(x-mu)/bb
         return 1/bb*math.exp(-(z+math.exp(-z)))
     @staticmethod
     def cdf(mu,bb,x):
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         return math.exp(-math.exp(-(x-mu)/bb))
     @staticmethod
     def random(mu,bb):
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         return mu-bb*math.log(-math.log(rg0()))
     @staticmethod
     def kurtosis(mu,bb):
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         return 12/5
     @staticmethod
     def mean(mu,bb):
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         return mu+bb*np.euler_gamma
     @staticmethod
     def median(mu,bb):
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         return mu-bb*math.log(math.log(2))
     @staticmethod
     def mode(mu,bb):
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         return mu
     @staticmethod
     def variance(mu,bb):
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         return math.pi**2/6*(bb**2)
     @staticmethod
     def stddev(mu,bb):
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         return math.pi*bb/math.sqrt(6)
     @staticmethod
     def entropy(mu,bb):
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         return math.log(bb)+np.euler_gamma+1
     @staticmethod
     def skewness(mu,bb):
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
-        return 12*math.sqrt(6)*np.special.zeta(3,1)/(math.pi**3)
+            raise ValueError("bb must be positive")
+        return 12*math.sqrt(6)*sp.zeta(3,1)/(math.pi**3)
     @staticmethod
     def ppf(mu,bb,q):
         if(bb<=0):
-            raise InvalidInputError("bb must be positive")
+            raise ValueError("bb must be positive")
         return mu-bb*math.log(-math.log(q))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=gumbel.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'mu':ret[0],'bb':ret[1]}
 
 '''
 Gumbel 2 distribution*
@@ -3511,21 +4214,21 @@ class halfnormal(Distribution):
     @staticmethod
     def pdf(sigma2,x):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         if(x<0):
-            raise InvalidInputError("x must be non-negative")
+            raise ValueError("x must be non-negative")
         return math.sqrt(2/(math.pi*sigma2))*math.exp(-x**2/(2*sigma2))
     @staticmethod
     def cdf(sigma2,x):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         if(x<0):
-            raise InvalidInputError("x must be non-negative")
+            raise ValueError("x must be non-negative")
         return math.erf(math.sqrt(x**2/(2*sigma2)))
     @staticmethod
     def random(sigma2):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         n=normal.random(0,sigma2)
         while(n<0):
             n=normal.random(0,sigma2)
@@ -3533,27 +4236,36 @@ class halfnormal(Distribution):
     @staticmethod
     def mean(sigma2):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         return math.sqrt(2*sigma2/math.pi)
     @staticmethod
     def variance(sigma2):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         return sigma2*(1-2/math.pi)
     @staticmethod
     def stddev(sigma2):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         return math.sqrt(sigma2*(1-2/math.pi))
     @staticmethod
     def entropy(sigma2):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         return 1/2*math.log(math.pi*sigma2/2)+1/2
     @staticmethod
     def skewness(sigma2):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=halfnormal.pdf(args_[0],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1),method='Nelder-Mead').x.tolist()
+        return {'sigma2':ret[0]}
 
 '''
 Harris extended exponential distribution
@@ -3574,6 +4286,15 @@ class harrisextexp(Distribution): #harris extended exponential
     @staticmethod
     def ppf(l,k,t,q):
         return math.pow(l*k,-1)*math.log((1-t)+t*math.pow(1-q,-k))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=harrisextexp.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'l':ret[0],'k':ret[1],'t':ret[2]}
 
 '''
 Hermite distribution
@@ -3604,10 +4325,10 @@ Hyperbolic secant distribution
 class hyperbolicsecant(Distribution):
     @staticmethod
     def pdf(x):
-        return 1/2*math.sech(math.pi*x/2)
+        return 1/(2*np.cosh(math.pi*x/2))
     @staticmethod
     def cdf(x):
-        return 2/math.pi*math.arctan(math.exp(math.pi*x/2))
+        return 2/math.pi*math.atan(math.exp(math.pi*x/2))
     @staticmethod
     def random():
         return 2/math.pi*math.log(math.tan(math.pi*r.random()/2))
@@ -3691,7 +4412,7 @@ class hypoexp(Distribution): #hypoexponential
     def random(lmbdas):
         sum_=0
         for i in range(lmbdas):
-            sum_+=exp.random(lmbdas[i])
+            sum_+=exponential.random(lmbdas[i])
         return sum_
 
 '''
@@ -3726,6 +4447,15 @@ class invchi2(Distribution): #inverse chi-squared
     @staticmethod
     def skewness(nu):
         return 4/(nu-6)*math.sqrt(2*(nu-4))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=invchi2.pdf(args_[0],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1),method='Nelder-Mead').x.tolist()
+        return {'nu':ret[0]}
 
 '''
 Inverse exponential distribution*
@@ -3768,6 +4498,15 @@ class invgamma(Distribution): #inverse gamma
     def skewness(a,b):
         if(a>3):
             return 4*math.sqrt(a-2)/(a-3)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=invgamma.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1]}
 
 '''
 Inverse normal distribution*
@@ -3806,7 +4545,7 @@ class irwinhall(Distribution):
     @staticmethod
     def random(n):
         if(n<=0 or n%1!=0):
-            raise InvalidInputError("n must be a positive integer")
+            raise ValueError("n must be a positive integer")
         sum_=0
         for _ in range(n):
             sum_+=r.random()
@@ -3814,39 +4553,39 @@ class irwinhall(Distribution):
     @staticmethod
     def kurtosis(n):
         if(n<=0 or n%1!=0):
-            raise InvalidInputError("n must be a positive integer")
+            raise ValueError("n must be a positive integer")
         return -6/(5*n)
     @staticmethod
     def mean(n):
         if(n<=0 or n%1!=0):
-            raise InvalidInputError("n must be a positive integer")
+            raise ValueError("n must be a positive integer")
         return n/2
     @staticmethod
     def median(n):
         if(n<=0 or n%1!=0):
-            raise InvalidInputError("n must be a positive integer")
+            raise ValueError("n must be a positive integer")
         return n/2
     @staticmethod
     def mode(n):
         if(n<=0 or n%1!=0):
-            raise InvalidInputError("n must be a positive integer")
+            raise ValueError("n must be a positive integer")
         if(n==1):
             return 1
         return n/2
     @staticmethod
     def variance(n):
         if(n<=0 or n%1!=0):
-            raise InvalidInputError("n must be a positive integer")
+            raise ValueError("n must be a positive integer")
         return n/12
     @staticmethod
     def stddev(n):
         if(n<=0 or n%1!=0):
-            raise InvalidInputError("n must be a positive integer")
+            raise ValueError("n must be a positive integer")
         return math.sqrt(n/12)
     @staticmethod
     def skewness(n):
         if(n<=0 or n%1!=0):
-            raise InvalidInputError("n must be a positive integer")
+            raise ValueError("n must be a positive integer")
         return 0
 
 '''
@@ -3869,6 +4608,15 @@ class johnsonsb(Distribution):
     @staticmethod
     def median(delta,gmma,xi,lmbda):
         return xi+lmbda/(1+math.exp(gmma/delta))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=johnsonsb.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'delta':ret[0],'gamma':ret[1],'xi':ret[2],'lmbda':ret[3]}
 
 '''
 Johnson SL distribution
@@ -3894,17 +4642,26 @@ class johnsonsl(Distribution):
     def mean(delta,gmma,xi,lmbda):
         return xi+lmbda*math.exp((1-2*gmma*delta)/(2*delta**2))
     @staticmethod
-    def median():
+    def median(delta,gmma,xi,lmbda):
         return xi+lmbda*math.exp(-gmma/delta)
     @staticmethod
     def variance(delta,gmma,xi,lmbda):
         return math.exp((1-2*gmma*delta)/(delta**2))*lmbda**2*(-1+math.exp(1/delta**2))
     @staticmethod
-    def stddev():
+    def stddev(delta,gmma,xi,lmbda):
         return math.sqrt(math.exp((1-2*gmma*delta)/(delta**2))*lmbda**2*(-1+math.exp(1/delta**2)))
     @staticmethod
     def skewness(delta,gmma,xi,lmbda):
         return (2+math.exp(1/delta**2))*math.sqrt(-1+math.exp(1/delta**2))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=johnsonsl.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'delta':ret[0],'gamma':ret[1],'xi':ret[2],'lmbda':ret[3]}
 
 '''
 Johnson SU distribution
@@ -3935,6 +4692,15 @@ class johnsonsu(Distribution):
     @staticmethod
     def skewness(delta,gmma,xi,lmbda):
         i=math.exp(1/(2*delta**2))*math.sqrt(-1+math.exp(1/delta**2))*(3*math.exp(2*gmma/delta)-3*math.exp(4*gmma/delta)+(2+math.exp(1/delta**2)*math.exp(1/delta**2))-(2+math.exp(1/delta**2))*math.exp((1+6*gmma*delta)/delta**2))/math.pow(math.exp(1/delta**2)+2*math.exp(2*gmma/delta)+math.exp((1+4*gmma*delta)/delta**2),3/2)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=johnsonsu.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'delta':ret[0],'gamma':ret[1],'xi':ret[2],'lmbda':ret[3]}
 
 '''
 K distribution*
@@ -3942,7 +4708,7 @@ K distribution*
 class k(Distribution):
     @staticmethod
     def random(a,b):
-        return math.sqrt(exp.random(1)*gamma.random(a,b/a))
+        return math.sqrt(exponential.random(1)*gamma.random(a,b/a))
 
 '''
 K-prime distribution
@@ -3990,53 +4756,63 @@ class kumaraswamy(Distribution):
     @staticmethod
     def pdf(a,b,x):
         if(a<=0 or b<=0):
-            raise InvalidInputError("a and b must be positive")
+            raise ValueError("a and b must be positive")
         if(x<0 or x>1):
-            raise InvalidInputError("x must be between 0 and 1 inclusive")
+            raise ValueError("x must be between 0 and 1 inclusive")
         return a*b*math.pow(x,a-1)*math.pow(1-math.pow(x,a),b-1)
     @staticmethod
     def cdf(a,b,x):
         if(a<=0 or b<=0):
-            raise InvalidInputError("a and b must be positive")
+            raise ValueError("a and b must be positive")
         if(x<0 or x>1):
-            raise InvalidInputError("x must be between 0 and 1 inclusive")
+            raise ValueError("x must be between 0 and 1 inclusive")
         return 1-math.pow(1-math.pow(x,a),b)
     @staticmethod
     def random(a,b):
         if(a<=0 or b<=0):
-            raise InvalidInputError("a and b must be positive")
+            raise ValueError("a and b must be positive")
         return math.pow(1-math.pow(1-r.random(),1/b),1/a)
     @staticmethod
     def mean(a,b):
         if(a<=0 or b<=0):
-            raise InvalidInputError("a and b must be positive")
+            raise ValueError("a and b must be positive")
         return b*math.gamma(1+1/a)*math.gamma(b)/math.gamma(1+1/a+b)
     @staticmethod
     def median(a,b):
         if(a<=0 or b<=0):
-            raise InvalidInputError("a and b must be positive")
+            raise ValueError("a and b must be positive")
         return math.pow(1-math.pow(2,-1/b),1/a)
     @staticmethod
     def mode(a,b):
         if(a<=0 or b<=0):
-            raise InvalidInputError("a and b must be positive")
+            raise ValueError("a and b must be positive")
         if(a>=1 and b>=1 and (a!=1 or b!=1)):
             return math.pow((a-1)/(a*b-1),1/a)
         return None
     @staticmethod
     def variance(a,b):
         if(a<=0 or b<=0):
-            raise InvalidInputError("a and b must be positive")
+            raise ValueError("a and b must be positive")
         return (b*math.gamma(1+2/a)*math.gamma(b)/math.gamma(1+b+2/a))-(b*math.gamma(1+1/a)*math.gamma(b)/math.gamma(1+b+1/a))**2
     @staticmethod
     def stddev(a,b):
         if(a<=0 or b<=0):
-            raise InvalidInputError("a and b must be positive")
+            raise ValueError("a and b must be positive")
     @staticmethod
     def ppf(a,b,q):
         if(a<=0 or b<=0):
-            raise InvalidInputError("a and b must be positive")
+            raise ValueError("a and b must be positive")
         return math.pow(1-math.pow(1-q,1/b),1/a)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=kumaraswamy.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1]}
+
 
 '''
 Kumaraswamy 4 distribution*
@@ -4078,6 +4854,16 @@ class kumaraswamydagum(Distribution):
     @staticmethod
     def ppf(a,b,bb,d,l,q):
         return math.pow((math.pow(1-math.pow(1-q,1/b),1/(-bb*a))-1)/l,-1/d)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=kumaraswamydagum.pdf(args_[0],args_[1],args_[2],args_[3],args_[4],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'bb':ret[2],'d':ret[3],'l':ret[4]}
+
 
 '''
 Kumaraswamy-exponentiated Pareto distribution
@@ -4099,6 +4885,15 @@ class kumaraswamyexponentiatedpareto(Distribution):
     @staticmethod
     def ppf(a,b,l,m,t,q):
         return l/math.pow(1-math.pow(1-math.pow(1-q,1/b),1/(t*a)),1/m)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=kumaraswamyexponentiatedpareto.pdf(args_[0],args_[1],args_[2],args_[3],args_[4],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'l':ret[2],'m':ret[3],'t':ret[4]}
 
 '''
 Kumaraswamy flexible Weibull extension distribution
@@ -4116,13 +4911,23 @@ class kumaraswamyflexibleweibullextension(Distribution):
     def cdf(a,b,aa,bb,x):
         return 1-math.pow(1-math.pow(1-math.exp(-math.exp(aa*x-bb/x)),a),b)
     @staticmethod
-    def median():
+    def median(a,b,aa,bb):
         i=math.log(-math.log(1-math.pow(1-math.pow(1/2,1/b),1/a)))
         return 1/(2*aa)*(i+math.sqrt(i**2+4*aa*bb))
     @staticmethod
     def ppf(a,b,aa,bb,q):
         i=math.log(-math.log(1-math.pow(1-math.pow(1-q,1/b),1/a)))
         return 1/(2*aa)*(i+math.sqrt(i**2+4*aa*bb))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=kumaraswamyflexibleweibullextension.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'aa':ret[2],'bb':ret[3]}
+
 
 '''
 Kumaraswamy generalized exponentiated exponential distribution
@@ -4131,8 +4936,10 @@ class kumaraswamygenexpexp(Distribution): #kumaraswamy generalized exponentiated
     @staticmethod
     def random(a,b,c,l):
         return 1/(l*math.log(1-math.pow(1-math.pow(1-rg0(),1/b),1/(a*c))))
+    @staticmethod
     def median(a,b,c,l):
         return 1/(l*math.log(1-math.pow(1-math.pow(1/2,1/b),1/(a*c))))
+    @staticmethod
     def ppf(a,b,c,l,q):
         return 1/(l*math.log(1-math.pow(1-math.pow(1-q,1/b),1/(a*c))))
 
@@ -4155,6 +4962,15 @@ class kumaraswamygenexppareto(Distribution): #kumaraswamy generalized exponentia
     @staticmethod
     def ppf(a,b,l,t,q):
         return math.pow(1-math.pow(1-math.pow(1-q,1/b),1/(a*t)),-1/l)-1
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=kumaraswamygenexppareto.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'l':ret[2],'t':ret[3]}
 
 '''
 Kumaraswamy generalized exponentiated Weibull distribution
@@ -4190,6 +5006,15 @@ class kumaraswamygenhalfnormal(Distribution): #kumaraswamy generalized half-norm
     @staticmethod
     def ppf(a,b,aa,t,q):
         return t*math.pow(st.norm.ppf((1+math.pow(1-math.pow(1-q,1/b),1/a))/2),1/aa)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=kumaraswamyhalfcauchy.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'aa':ret[2],'t':ret[3]}
 
 '''
 Kumaraswamy generalized power-Weibull distribution
@@ -4197,7 +5022,7 @@ Kumaraswamy generalized power-Weibull distribution
 class kumaraswamygenpowerweibull(Distribution):#kumaraswamy generalized power-weibull
     @staticmethod
     def random(a,b,t,aa,l):
-        return l*math.pow(math.pow(1-math.ln(1-math.pow(1-math.pow(1-rg0(),1/b),1/a)),1/t)-1,1/aa)
+        return l*math.pow(math.pow(1-math.log(1-math.pow(1-math.pow(1-rg0(),1/b),1/a)),1/t)-1,1/aa)
     @staticmethod
     def pdf(a,b,t,aa,l,x):
         p5=math.pow(1-math.pow(1-math.exp(1-math.pow(1+math.pow(x/l,aa),t)),a),b-1)
@@ -4211,10 +5036,19 @@ class kumaraswamygenpowerweibull(Distribution):#kumaraswamy generalized power-we
         return 1-math.pow(1-math.pow(1-math.exp(1-math.pow(1+math.pow(x/l,aa),t)),a),b)
     @staticmethod
     def median(a,b,t,aa,l):
-        return l*math.pow(math.pow(1-math.ln(1-math.pow(1-math.pow(1/2,1/b),1/a)),1/t)-1,1/aa)
+        return l*math.pow(math.pow(1-math.log(1-math.pow(1-math.pow(1/2,1/b),1/a)),1/t)-1,1/aa)
     @staticmethod
     def ppf(a,b,t,aa,l,q):
         return l*math.pow(math.pow(1-math.ln(1-math.pow(1-math.pow(1-q,1/b),1/a)),1/t)-1,1/aa)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=kumaraswamygenpowerweibull.pdf(args_[0],args_[1],args_[2],args_[3],args_[4],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'t':ret[2],'aa':ret[3],'l':ret[4]}
 
 '''
 Kumaraswamy-Gumbel distribution
@@ -4257,6 +5091,16 @@ class kumaraswamyhalfcauchy(Distribution):
         func = lambda n,x,args_: n*math.log(args_[0]*args_[1])+n*args_[0]*math.log(2/math.pi)-n*math.log(args_[2])+(args_[1]-1)*np.sum(np.power(1-np.power(2/math.pi*np.atan(x/args_[2]),args_[1]),-1))+(args_[0]-1)*np.sum(np.atan(x/args_[2]))-np.sum(np.power(np.log(1+np.power(x/args_[2],2)),-1))
         det=op.basinhopping(func,args0)
         return {'a':det[0],'b':det[1],'d':det[2]}
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=kumaraswamyhalfcauchy.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'d':ret[2]}
+
 '''
 Kumaraswamy inverse exponential distribution
 '''
@@ -4276,6 +5120,15 @@ class kumaraswamyinvexp(Distribution): #kumaraswamy inverse exponential
     @staticmethod
     def ppf(a,b,l,q):
         return -a*l/math.log(1-math.pow(1-q,1/b))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=kumaraswamyinvexp.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'l':ret[2]}
 
 '''
 Kumaraswamy inverse Weibull distribution
@@ -4296,6 +5149,16 @@ class kumaraswamyinvweibull(Distribution): #kumaraswamy inverse weibull
     @staticmethod
     def ppf(a,aa,b,bb,q):
         return math.pow(-a*aa/math.log(1-math.pow(1-q,1/b)),1/bb)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=kumaraswamyhalfcauchy.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'aa':ret[1],'b':ret[2],'bb':ret[3]}
+
 
 '''
 Kumaraswamy-Kumaraswamy distribution
@@ -4319,10 +5182,10 @@ class kumaraswamylinearexp(Distribution): #kumaraswamy linear exponential
     def random(a,b,l,t):
         return (-l+math.sqrt(l**2-(2*t/a)*math.log(1-(1-math.pow(1-rg0(),1/b)))))/t
     @staticmethod
-    def random(a,b,l,t):
+    def median(a,b,l,t):
         return (-l+math.sqrt(l**2-(2*t/a)*math.log(1-(1-math.pow(1/2,1/b)))))/t
     @staticmethod
-    def random(a,b,l,t,q):
+    def ppf(a,b,l,t,q):
         return (-l+math.sqrt(l**2-(2*t/a)*math.log(1-(1-math.pow(1-q,1/b)))))/t
 
 '''
@@ -4344,6 +5207,16 @@ class kumaraswamyloglogistic(Distribution):
     @staticmethod
     def ppf(a,b,aa,g,q):
         return aa*(math.pow(1-math.pow(1-math.pow(1-q,1/b),1/a),-1/g)-1)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=kumaraswamyloglogistic.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'aa':ret[2],'g':ret[3]}
+
 
 '''
 Kumaraswamy-Pareto distribution
@@ -4364,6 +5237,15 @@ class kumaraswamypareto(Distribution):
     @staticmethod
     def ppf(a,b,bb,k,q):
         return bb/math.pow(1-math.pow(1-math.pow(1-q,1/b),1/a),1/k)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=kumaraswamypareto.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'bb':ret[2],'k':ret[3]}
 
 '''
 Kumaraswamy Weibull-Poisson distribution
@@ -4386,6 +5268,16 @@ class kumaraswamyweibullpoisson(Distribution):
     @staticmethod
     def ppf(a,b,bb,c,l,q):
         return math.pow(-math.log(1+math.log(1-q*(1-math.exp(-l)))/l),1/c)/bb
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=kumaraswamyweibullpoisson.pdf(args_[0],args_[1],args_[2],args_[3],args_[4],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'bb':ret[2],'c':ret[3],'l':ret[4]}
+
 
 '''
 Laha distribution*
@@ -4413,65 +5305,65 @@ class laplace(Distribution):
     @staticmethod
     def pdf(mu,b,x):
         if(b<=0):
-            raise InvalidInputError("b must be positive")
+            raise ValueError("b must be positive")
         return 1/(2*b)*math.exp(-abs(x-mu)/b)
     @staticmethod
     def cdf(mu,b,x):
         if(b<=0):
-            raise InvalidInputError("b must be positive")
+            raise ValueError("b must be positive")
         if(x<mu):
             return 1/2*math.exp((x-mu)/b)
         return 1-1/2*math.exp(-(x-mu)/b)
     @staticmethod
     def random(mu,b):
         if(b<=0):
-            raise InvalidInputError("b must be positive")
+            raise ValueError("b must be positive")
         u=r.random()
         return mu-b*(abs(u-0.5)/(u-0.5))*math.log(1-2*abs(u-0.5))
     @staticmethod
     def kurtosis(mu,b):
         if(b<=0):
-            raise InvalidInputError("b must be positive")
+            raise ValueError("b must be positive")
         return 3
     @staticmethod
     def mean(mu,b):
         if(b<=0):
-            raise InvalidInputError("b must be positive")
+            raise ValueError("b must be positive")
         return mu
     @staticmethod
     def median(mu,b):
         if(b<=0):
-            raise InvalidInputError("b must be positive")
+            raise ValueError("b must be positive")
         return mu
     @staticmethod
     def mode(mu,b):
         if(b<=0):
-            raise InvalidInputError("b must be positive")
+            raise ValueError("b must be positive")
         return mu
     @staticmethod
     def variance(mu,b):
         if(b<=0):
-            raise InvalidInputError("b must be positive")
+            raise ValueError("b must be positive")
         return 2*(b**2)
     @staticmethod
     def stddev(mu,b):
         if(b<=0):
-            raise InvalidInputError("b must be positive")
+            raise ValueError("b must be positive")
         return b*math.sqrt(2)
     @staticmethod
     def entropy(mu,b):
         if(b<=0):
-            raise InvalidInputError("b must be positive")
+            raise ValueError("b must be positive")
         return math.log(2*b*math.exp(1))
     @staticmethod
     def skewness(mu,b):
         if(b<=0):
-            raise InvalidInputError("b must be positive")
+            raise ValueError("b must be positive")
         return 0
     @staticmethod
     def ppf(mu,b,q):
         if(b<=0):
-            raise InvalidInputError("b must be positive")
+            raise ValueError("b must be positive")
         return mu-b*(abs(q-0.5)/(q-0.5))*math.log(1-2*abs(q-0.5))
     @staticmethod
     def mle(x):
@@ -4486,57 +5378,66 @@ class levy(Distribution):
     @staticmethod
     def pdf(mu,c,x):
         if(c<=0):
-            raise InvalidInputError("c must be positive")
+            raise ValueError("c must be positive")
         if(x<mu):
-            raise InvalidInputError("x must be greater than or equal to mu")
+            raise ValueError("x must be greater than or equal to mu")
         return math.sqrt(c/(2*math.pi))*math.exp((-c)/(2*(x-mu)))/math.pow(x-mu,3/2)
     @staticmethod
     def cdf(mu,c,x):
         if(c<=0):
-            raise InvalidInputError("c must be positive")
+            raise ValueError("c must be positive")
         if(x<mu):
-            raise InvalidInputError("x must be greater than or equal to mu")
+            raise ValueError("x must be greater than or equal to mu")
         return math.erfc(math.sqrt(c/(2*(x-mu))))
     @staticmethod
     def random(mu,c):
         if(c<=0):
-            raise InvalidInputError("c must be positive")
+            raise ValueError("c must be positive")
         return c/math.pow(abs(st.norm.ppf(1-rg0()/2)),2)+mu
     @staticmethod
     def kurtosis(mu,c):
         if(c<=0):
-            raise InvalidInputError("c must be positive")
+            raise ValueError("c must be positive")
         return None
     @staticmethod
     def mean(mu,c):
         if(c<=0):
-            raise InvalidInputError("c must be positive")
+            raise ValueError("c must be positive")
         return float("infinity")
     @staticmethod
     def variance(mu,c):
         if(c<=0):
-            raise InvalidInputError("c must be positive")
+            raise ValueError("c must be positive")
         return float("infinity")
     @staticmethod
     def stddev(mu,c):
         if(c<=0):
-            raise InvalidInputError("c must be positive")
+            raise ValueError("c must be positive")
         return float("infinity")
     @staticmethod
     def entropy(mu,c):
         if(c<=0):
-            raise InvalidInputError("c must be positive")
+            raise ValueError("c must be positive")
         return (1+3*np.euler_gamma+math.log(16*math.pi*c*c))/2
     @staticmethod
     def skewness(mu,c):
         if(c<=0):
-            raise InvalidInputError("c must be positive")
+            raise ValueError("c must be positive")
         return None
     @staticmethod
     def ppf(mu,c):
         if(c<=0):
-            raise InvalidInputError("c must be positive")
+            raise ValueError("c must be positive")
         return c/math.pow(abs(st.norm.ppf(1-q/2)),2)+mu
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=levy.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'mu':ret[0],'c':ret[1]}
 
 '''
 Levy-l distribution
@@ -4576,6 +5477,15 @@ class logcauchy(Distribution):
     @staticmethod
     def ppf(mu,sigma,q):
         return math.exp(mu+sigma*math.tan(math.pi*(q-1/2)))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=logcauchy.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'mu':ret[0],'sigma':ret[1]}
 
 '''
 Log-gamma distribution
@@ -4606,6 +5516,16 @@ class loggenlindleyweibull(Distribution): #log generalized lindley-weibull
     @staticmethod
     def mode(a,b,t,g,c):
         return g*math.pow((c*(b-t)*a+b*(c-1))/(2*c*t*b)+math.sqrt(math.pow(-c*(b-t)*a-b*(c-1),2)-4*b*c*t*(-c*a*a+a))/(2*c*t*b),1/c)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=loggenlindleyweibull.pdf(args_[0],args_[1],args_[2],args_[3],args_[4],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'t':ret[2],'g':ret[3],'c':ret[4]}
+
 
 '''
 Logistic distribution
@@ -4614,19 +5534,19 @@ class logistic(Distribution):
     @staticmethod
     def pdf(mu,s,x):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         z=-(x-mu)/s
         return math.exp(z)/(s*(1+math.exp(z))**2)
     @staticmethod
     def cdf(mu,s,x):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         z=-(x-mu)/s
         return 1/(1+math.exp(z))
     @staticmethod
     def random(mu,s):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         n=rg0()
         while(n==1):
             n=rg0()
@@ -4634,48 +5554,57 @@ class logistic(Distribution):
     @staticmethod
     def kurtosis(mu,s):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         return 1.2
     @staticmethod
     def mean(mu,s):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         return mu
     @staticmethod
     def median(mu,s):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         return mu
     @staticmethod
     def mode(mu,s):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         return mu
     @staticmethod
     def variance(mu,s):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         return (s*math.pi)**2/3
     @staticmethod
     def stddev(mu,s):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         return s*math.pi/math.sqrt(3)
     @staticmethod
     def entropy(mu,s):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         return math.log(s)+2
     @staticmethod
     def skewness(mu,s):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         return 0
     @staticmethod
     def ppf(mu,s,q):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         return mu+s*math.log(q/(1-q))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=logistic.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'mu':ret[0],'s':ret[1]}
 
 '''
 Logistic Burr XII distribution
@@ -4696,6 +5625,16 @@ class logisticburr12(Distribution):
     @staticmethod
     def ppf(c,k,l,s,q):
         return s*math.pow(math.exp(math.pow(math.pow(1/q-1,-1/l),1/k))-1,1/c)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=logisticburr12.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'c':ret[0],'k':ret[1],'l':ret[2],'s':ret[3]}
+
 
 '''
 Logistic exponential distribution
@@ -4713,6 +5652,15 @@ class logisticexp(Distribution): #logistic exponential
     @staticmethod
     def median(b,l):
         return logisticweibull.median(1,b,l)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=logisticexp.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'b':ret[0],'l':ret[1]}
 
 '''
 Logistic Frechet distribution
@@ -4733,6 +5681,15 @@ class logisticfrechet(Distribution):
     @staticmethod
     def ppf(a,b,l,q):
         return -b/math.pow(math.log(1-math.exp(-math.pow(1/q-1,-1/l))),1/a)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=logisticfrechet.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'l':ret[2]}
 
 '''
 Logistic log-logistic distribution
@@ -4750,6 +5707,15 @@ class logisticloglogistic(Distribution):
     @staticmethod
     def median(c,l,s):
         return logisticburr12.median(c,1,l,s)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=logisticloglogistic.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'c':ret[0],'l':ret[1],'s':ret[2]}
 
 '''
 Logistic Lomax distribution
@@ -4767,6 +5733,16 @@ class logisticlomax(Distribution):
     @staticmethod
     def median(k,l,s):
         return logisticburr12.median(1,k,l,s)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=logisticlomax.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'k':ret[0],'l':ret[1],'s':ret[2]}
+
 
 '''
 Logistic Pareto distribution
@@ -4787,6 +5763,16 @@ class logisticpareto(Distribution):
     @staticmethod
     def ppf(k,l,t,q):
         return t*math.pow(math.exp(math.pow(1/q-1,-1/l)),1/k)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=logisticpareto.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'k':ret[0],'l':ret[1],'t':ret[2]}
+
 
 '''
 Logistic Rayleigh distribution
@@ -4804,6 +5790,15 @@ class logisticrayleigh(Distribution):
     @staticmethod
     def median(b,l):
         return logisticweibull.median(2,b,l)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=logisticrayleigh.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'b':ret[0],'l':ret[1]}
 
 '''
 Logistic uniform distribution
@@ -4824,6 +5819,17 @@ class logisticuniform(Distribution):
     @staticmethod
     def ppf(l,t,q):
         return t*(1-math.exp(1-math.pow(1/q,-1/l)))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=logisticuniform.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'l':ret[0],'t':ret[1]}
+
+
 
 '''
 Logistic Weibull distribution
@@ -4844,6 +5850,15 @@ class logisticweibull(Distribution):
     @staticmethod
     def ppf(a,b,l,q):
         return math.pow((math.pow(1/q,-1/l)-1)/b,1/a)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=logisticweibull.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'l':ret[2]}
 
 '''
 Log-Laplace distribution
@@ -4859,6 +5874,16 @@ class loglaplace(Distribution):
     def cdf(mu,b,x):
         if(x>0):
             return (1+(1-math.exp(-abs(math.log(x)-mu)/b))*(abs(math.log(x)-mu)/(math.log(x)-mu)))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=loglaplace.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'mu':ret[0],'b':ret[1]}
+
 
 '''
 Log-logistic distribution
@@ -4886,7 +5911,7 @@ class loglogistic(Distribution):
         return aa
     @staticmethod
     def mode(aa,bb):
-        if(b>1):
+        if(bb>1):
             return aa*math.pow((bb-1)/(bb+1),1/bb)
         return 0
     @staticmethod
@@ -4896,10 +5921,21 @@ class loglogistic(Distribution):
             return aa**2*(2*b/math.sin(2*b)-b**2/(math.sin(b)**2))
     @staticmethod
     def stddev(aa,bb):
-        return aa*math.sqrt(2*b/math.sin(2*b)-b**2/(math.sin(b)**2))
+        if(bb>2):
+            b=math.pi/bb
+            return aa*math.sqrt(2*b/math.sin(2*b)-b**2/(math.sin(b)**2))
     @staticmethod
     def ppf(aa,bb,q):
         return aa*math.pow((q/(1-q)),1/bb)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=loglogistic.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'aa':ret[0],'bb':ret[1]}
 
 '''
 Log-normal distribution
@@ -4970,6 +6006,15 @@ class logtriangular(Distribution):
         if(math.log(q)<=b):
             return a*math.exp(math.sqrt(q*(math.log(b)-math.log(a))*(math.log(c)-math.log(a))))
         return c*math.exp(-math.sqrt(q*(math.log(c)-math.log(b))*(math.log(c)-math.log(a))))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=logtriangular.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'c':ret[2]}
 
 '''
 Lomax distribution
@@ -4978,21 +6023,21 @@ class lomax(Distribution):
     @staticmethod
     def pdf(lmbda,aa,x):
         if(lmbda<=0 or aa<=0):
-            raise InvalidInputError("lambda and aa must be positive")
+            raise ValueError("lambda and aa must be positive")
         if(x<0):
-            raise InvalidInputError("x must be non-negative")
+            raise ValueError("x must be non-negative")
         return aa/lmbda*math.pow(1+x/lmbda,-aa-1)
     @staticmethod
     def cdf(lmbda,aa,x):
         if(lmbda<=0 or aa<=0):
-            raise InvalidInputError("lambda and aa must be positive")
+            raise ValueError("lambda and aa must be positive")
         if(x<0):
-            raise InvalidInputError("x must be non-negative")
+            raise ValueError("x must be non-negative")
         return 1-math.pow(1+x/lmbda,-aa)
     @staticmethod
     def random(lmbda,aa):
         if(lmbda<=0 or aa<=0):
-            raise InvalidInputError("lambda and aa must be positive")
+            raise ValueError("lambda and aa must be positive")
         n=r.random()
         while(n==1):
             n=r.random()
@@ -5000,31 +6045,31 @@ class lomax(Distribution):
     @staticmethod
     def kurtosis(lmbda,aa):
         if(lmbda<=0 or aa<=0):
-            raise InvalidInputError("lambda and aa must be positive")
+            raise ValueError("lambda and aa must be positive")
         if(aa>4):
             return 6*(aa**3+aa**2-6*aa-2)/(aa*(aa-3)*(aa-4))
         return None
     @staticmethod
     def mean(lmbda,aa):
         if(lmbda<=0 or aa<=0):
-            raise InvalidInputError("lambda and aa must be positive")
+            raise ValueError("lambda and aa must be positive")
         if(aa>1):
             return lmbda/(aa-1)
         return None
     @staticmethod
     def median(lmbda,aa):
         if(lmbda<=0 or aa<=0):
-            raise InvalidInputError("lambda and aa must be positive")
+            raise ValueError("lambda and aa must be positive")
         return lmbda*(math.pow(2,1/aa)-1)
     @staticmethod
     def mode(lmbda,aa):
         if(lmbda<=0 or aa<=0):
-            raise InvalidInputError("lambda and aa must be positive")
+            raise ValueError("lambda and aa must be positive")
         return 0
     @staticmethod
     def variance(lmbda,aa):
         if(lmbda<=0 or aa<=0):
-            raise InvalidInputError("lambda and aa must be positive")
+            raise ValueError("lambda and aa must be positive")
         if(aa>2):
             return lmbda**2*aa/((aa-1)**2*(aa-2))
         if(aa>1):
@@ -5033,7 +6078,7 @@ class lomax(Distribution):
     @staticmethod
     def stddev(lmbda,aa):
         if(lmbda<=0 or aa<=0):
-            raise InvalidInputError("lambda and aa must be positive")
+            raise ValueError("lambda and aa must be positive")
         if(aa>2):
             return lmbda*math.sqrt(aa/(aa-2))/(aa-1)
         if(aa>1):
@@ -5042,15 +6087,24 @@ class lomax(Distribution):
     @staticmethod
     def skewness(lmbda,aa):
         if(lmbda<=0 or aa<=0):
-            raise InvalidInputError("lambda and aa must be positive")
+            raise ValueError("lambda and aa must be positive")
         if(aa>3):
             return 2*(1+aa)/(aa-3)*math.sqrt((aa-2)/aa)
         return None
     @staticmethod
     def ppf(lmbda,aa,q):
         if(lmbda<=0 or aa<=0):
-            raise InvalidInputError("lambda and aa must be positive")
+            raise ValueError("lambda and aa must be positive")
         return lmbda*(math.pow(1/(1-q),1/aa)-1)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=lomax.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'lmbda':ret[0],'aa':ret[1]}
 
 '''
 Marshall-Olkin Esscher transformed Laplace distribution
@@ -5058,7 +6112,7 @@ Marshall-Olkin Esscher transformed Laplace distribution
 class marshallolkinesschertransformedlaplace(Distribution):
     @staticmethod
     def random(b,t):
-        w=exp.random(1/b)
+        w=exponential.random(1/b)
         return 2*t/(1-t**2)*w+math.sqrt(2/(1-t**2))*math.sqrt(w)*normal.random(0,1)
     @staticmethod
     def pdf(b,t,x):
@@ -5089,6 +6143,15 @@ class marshallolkinesschertransformedlaplace(Distribution):
         l=math.sqrt(b*(1-t**2))
         k=l/(t+math.sqrt(l+t**2))
         return math.sqrt((1+k**4)/(l*k))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=marshallolkinesschertransformedlaplace.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'b':ret[0],'t':ret[1]}
 
 '''
 Maxwell-Boltzmann distribution
@@ -5097,17 +6160,17 @@ class maxwellboltzmann(Distribution):
     @staticmethod
     def pdf(aa,x):
         if(aa<=0 or x<=0):
-            raise InvalidInputError("all inputs must be positive")
+            raise ValueError("all inputs must be positive")
         return math.sqrt(2/math.pi)*(x**2*math.exp(x**2/(2*aa**2)))/(aa**3)
     @staticmethod
     def cdf(aa,x):
         if(aa<=0 or x<=0):
-            raise InvalidInputError("all inputs must be positive")
+            raise ValueError("all inputs must be positive")
         return math.erf(x/(math.sqrt(2)*aa))-math.sqrt(2/math.pi)*(x*math.exp(x**2/(2*aa**2)))/aa
     @staticmethod
     def random(aa):
         if(aa<=0):
-            raise InvalidInputError("aa must be positive")
+            raise ValueError("aa must be positive")
         r=(-math.log(rg0()))**2
         w1=(rg0())**2
         w2=(rg0())**2
@@ -5119,38 +6182,47 @@ class maxwellboltzmann(Distribution):
     @staticmethod
     def kurtosis(aa):
         if(aa<=0):
-            raise InvalidInputError("aa must be positive")
+            raise ValueError("aa must be positive")
         return 4*(-96+40*math.pi-3*(math.pi)**2)/((3*math.pi-8)**2)
     @staticmethod
     def mean(aa):
         if(aa<=0):
-            raise InvalidInputError("aa must be positive")
+            raise ValueError("aa must be positive")
         return 2*aa*math.sqrt(2/math.pi)
     @staticmethod
     def mode(aa):
         if(aa<=0):
-            raise InvalidInputError("aa must be positive")
+            raise ValueError("aa must be positive")
         return math.sqrt(2)*aa
     @staticmethod
     def variance(aa):
         if(aa<=0):
-            raise InvalidInputError("aa must be positive")
+            raise ValueError("aa must be positive")
         return aa**2*(3*math.pi-8)/math.pi
     @staticmethod
     def stddev(aa):
         if(aa<=0):
-            raise InvalidInputError("aa must be positive")
+            raise ValueError("aa must be positive")
         return aa*math.sqrt((3*math.pi-8)/math.pi)
     @staticmethod
     def entropy(aa):
         if(aa<=0):
-            raise InvalidInputError("aa must be positive")
+            raise ValueError("aa must be positive")
         return math.log(aa*math.sqrt(2*math.pi))+np.euler_gamma-1/2
     @staticmethod
     def skewness(aa):
         if(aa<=0):
-            raise InvalidInputError("aa must be positive")
+            raise ValueError("aa must be positive")
         return 2*math.sqrt(2)*(16-5*math.pi)/math.pow(3*math.pi-8,3/2)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=maxwellboltzmann.pdf(args_[0],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1),method='Nelder-Mead').x.tolist()
+        return {'aa':ret[0]}
 
 '''
 McDonald log-logistic distribution
@@ -5165,7 +6237,7 @@ class mcdonaldloglogistic(Distribution):
         q2=a/c*math.pow((u/(1-u)),1/b) #Q_{a/c},b
         return q1*math.pow(q2,1/c)/(1-q1*math.pow(q2,1/c))
     @staticmethod
-    def pdf(a,b,c,aa,bb):
+    def pdf(a,b,c,aa,bb,x):
         return c/sp.beta(a/c,b)*aa/bb*math.pow(x/bb,a*aa-1)*math.pow(1+math.pow(x/bb,aa),-a-1)*math.pow(1-math.pow(1-1/(1+math.pow(x/bb,aa)),c),b-1)
     @staticmethod
     def median(a,b,c,aa,bb):
@@ -5177,6 +6249,15 @@ class mcdonaldloglogistic(Distribution):
         q1=aa*math.pow((q/(1-q)),1/bb) #Q_alpha,beta
         q2=a/c*math.pow((q/(1-q)),1/b) #Q_{a/c},b
         return q1*math.pow(q2,1/c)/(1-q1*math.pow(q2,1/c))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=mcdonaldloglogistic.pdf(args_[0],args_[1],args_[2],args_[3],args_[4],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'c':ret[2],'aa':ret[3],'bb':ret[4]}
 
 '''
 Meridian distribution*
@@ -5208,6 +6289,15 @@ class mielkebetakappa(Distribution):
     @staticmethod
     def ppf(k,theta,q):
         return math.pow((math.pow(q,theta/k))/(1-math.pow(q,theta/k)),1/theta)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=mielkebetakappa.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'k':ret[0],'theta':ret[1]}
 
 '''
 Minimax distribution
@@ -5228,6 +6318,15 @@ class minimax(Distribution):
     @staticmethod
     def ppf(aa,bb,q):
         return math.pow(1-math.pow(1-q,1/aa),1/bb)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=minimax.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'aa':ret[0],'bb':ret[1]}
 
 '''
 Modified Burr III distribution
@@ -5248,6 +6347,15 @@ class modburr3(Distribution):
     @staticmethod
     def ppf(a,b,g,q):
         return math.pow((math.pow(q,-g/a)-1)/g,-1/b)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=modburr3.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'g':ret[2]}
 
 '''
 Modified Burr III Burr XII distribution
@@ -5269,13 +6377,23 @@ class modburr3burr12(Distribution):
     @staticmethod
     def ppf(a,b,c,g,k,q):
         return math.pow(math.pow(math.pow((math.pow(q,-g/a)-1)/g,-1/b)+1,1/k)-1,1/c)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=modburr3burr12.pdf(args_[0],args_[1],args_[2],args_[3],args_[4],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'c':ret[2],'g':ret[3],'k':ret[4]}
+
 
 '''
 Modified Burr III Kumaraswamy distribution
 '''
 class modburr3kumaraswamy(Distribution):
     @staticmethod
-    def random(a,aa,bb,g):
+    def random(a,aa,b,bb,g):
         u=rg0()
         return math.pow(1-math.pow(math.pow((math.pow(u,-g/aa)-1)/g,-1/bb)+1,-1/b),1/a)
     @staticmethod
@@ -5291,6 +6409,15 @@ class modburr3kumaraswamy(Distribution):
     @staticmethod
     def ppf(a,aa,b,bb,g,q):
         return math.pow(1-math.pow(math.pow((math.pow(q,-g/aa)-1)/g,-1/bb)+1,-1/b),1/a)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=modburr3burr12.pdf(args_[0],args_[1],args_[2],args_[3],args_[4],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'aa':ret[1],'b':ret[2],'bb':ret[3],'g':ret[4]}
 
 '''
 Modified Burr III Weibull distribution
@@ -5301,13 +6428,22 @@ class modburr3weibull(Distribution):
         return math.pow(math.log(math.pow(math.pow(rg0(),-g/a)-1,-1/b)/g+1)/l,1/n)
     @staticmethod
     def pdf(a,b,g,l,n,x):
-        return a*b*math.pow(math.exp(l*math.pow(x,n)-1),-b-1)*l*v*math.pow(x,n-1)*math.exp(l*math.pow(x,n))*math.pow(1+g*math.pow(math.exp(l*math.pow(x,n))-1,-b),-a/g-1)
+        return a*b*math.pow(math.exp(l*math.pow(x,n)-1),-b-1)*l*n*math.pow(x,n-1)*math.exp(l*math.pow(x,n))*math.pow(1+g*math.pow(math.exp(l*math.pow(x,n))-1,-b),-a/g-1)
     @staticmethod
     def median(a,b,g,l,n):
         return math.pow(math.log(math.pow(math.pow(1/2,-g/a)-1,-1/b)/g+1)/l,1/n)
     @staticmethod
     def ppf(a,b,g,l,n,q):
         return math.pow(math.log(math.pow(math.pow(q,-g/a)-1,-1/b)/g+1)/l,1/n)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=modburr3weibull.pdf(args_[0],args_[1],args_[2],args_[3],args_[4],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'g':ret[2],'l':ret[3],'n':ret[4]}
 
 '''
 Modified extended generalized exponential distribution
@@ -5333,6 +6469,15 @@ class modifextgenexp(Distribution): #modified extended generalized exponential
     @staticmethod
     def ppf(a,b,e,l,q):
         return -1/l*math.log(1/e*(b-math.pow(q*math.pow(b,a/e)-(q-1)*math.pow(b-e,a/e)),e/a))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=modburr3burr12.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'e':ret[2],'l':ret[3]}
 
 '''
 Moffat distribution*
@@ -5403,20 +6548,30 @@ class nakagami(Distribution):
     @staticmethod
     def stddev(m,omega):
         return math.sqrt(omega*(1-1/m*(math.gamma(m+1/2)/math.gamma(m))**2))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=nakagami.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'m':ret[0],'omega':ret[1]}
+
 
 '''
 Negative binomial distribution
 '''
 class negbin(Distribution):
     @staticmethod
-    def random(r,p):
-        if(r%1!=0 or r<=0):
-            raise InvalidInputError("r must be a positive integer")
+    def random(rr,p):
+        if(rr%1!=0 or rr<=0):
+            raise ValueError("rr must be a positive integer")
         if(p<=0 or p>=1):
-            raise InvalidInputError("p must be between 0 and 1 exclusive")
+            raise ValueError("p must be between 0 and 1 exclusive")
         num_failure=0
         num_success=0
-        while(num_failure<k):
+        while(num_failure<rr):
             if(r.random()<=p):
                 num_success+=1
             else:
@@ -5425,46 +6580,46 @@ class negbin(Distribution):
     @staticmethod
     def kurtosis(r,p):
         if(r%1!=0 or r<=0):
-            raise InvalidInputError("r must be a positive integer")
+            raise ValueError("r must be a positive integer")
         if(p<=0 or p>=1):
-            raise InvalidInputError("p must be between 0 and 1 exclusive")
+            raise ValueError("p must be between 0 and 1 exclusive")
         return 6/r+(1-p)**2/(p*r)
     @staticmethod
     def mean(r,p):
         if(r%1!=0 or r<=0):
-            raise InvalidInputError("r must be a positive integer")
+            raise ValueError("r must be a positive integer")
         if(p<=0 or p>=1):
-            raise InvalidInputError("p must be between 0 and 1 exclusive")
+            raise ValueError("p must be between 0 and 1 exclusive")
         return p*r/(1-p)
     @staticmethod
     def mode(r,p):
         if(r%1!=0 or r<=0):
-            raise InvalidInputError("r must be a positive integer")
+            raise ValueError("r must be a positive integer")
         if(p<=0 or p>=1):
-            raise InvalidInputError("p must be between 0 and 1 exclusive")
+            raise ValueError("p must be between 0 and 1 exclusive")
         if(r>1):
             return math.floor(p*(r-1)/(1-p))
         return 0
     @staticmethod
     def variance(r,p):
         if(r%1!=0 or r<=0):
-            raise InvalidInputError("r must be a positive integer")
+            raise ValueError("r must be a positive integer")
         if(p<=0 or p>=1):
-            raise InvalidInputError("p must be between 0 and 1 exclusive")
+            raise ValueError("p must be between 0 and 1 exclusive")
         return p*r/((1-p)**2)
     @staticmethod
     def stddev(r,p):
         if(r%1!=0 or r<=0):
-            raise InvalidInputError("r must be a positive integer")
+            raise ValueError("r must be a positive integer")
         if(p<=0 or p>=1):
-            raise InvalidInputError("p must be between 0 and 1 exclusive")
+            raise ValueError("p must be between 0 and 1 exclusive")
         return math.sqrt(p*r)/(1-p)
     @staticmethod
     def skewness(r,p):
         if(r%1!=0 or r<=0):
-            raise InvalidInputError("r must be a positive integer")
+            raise ValueError("r must be a positive integer")
         if(p<=0 or p>=1):
-            raise InvalidInputError("p must be between 0 and 1 exclusive")
+            raise ValueError("p must be between 0 and 1 exclusive")
         return (1+p)/math.sqrt(p*r)
 
 '''
@@ -5553,63 +6708,63 @@ class normal(Distribution):
     @staticmethod
     def pdf(mu,sigma2,x):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         return 1/math.sqrt(2*math.pi*sigma2)*math.exp(-(x-mu)**2/(2*sigma2))
     @staticmethod
     def cdf(mu,sigma2,x):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         return 1/2*(1+math.erf((x-mu)/math.sqrt(2*sigma2)))
     @staticmethod
     def random(mu,sigma2):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         a=rg0()
         b=rg0()
         while(a==1):
             a=rg0()
         while(b==1):
             b=rg0()
-        return math.sqrt(-2*math.log(a))*math.cos(2*math.pi*b)*sigma+mu
+        return math.sqrt(-2*math.log(a))*math.cos(2*math.pi*b)*math.sqrt(sigma2)+mu
     @staticmethod
     def kurtosis(mu,sigma2):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         return 0
     @staticmethod
     def mean(mu,sigma2):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         return mu
     @staticmethod
     def median(mu,sigma2):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         return mu
     @staticmethod
     def mode(mu,sigma2):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         return mu
     @staticmethod
     def variance(mu,sigma2):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         return sigma2
     @staticmethod
     def stddev(mu,sigma2):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         return math.sqrt(sigma2)
     @staticmethod
     def entropy(mu,sigma2):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         return 1/2*math.log(2*math.pi*math.exp(1)*sigma2)
     @staticmethod
     def skewness(mu,sigma2):
         if(sigma2<=0):
-            raise InvalidInputError("sigma2 must be positive")
+            raise ValueError("sigma2 must be positive")
         return 0
     @staticmethod
     def mle(x):
@@ -5652,6 +6807,15 @@ class oddgenexpgompertz(Distribution): #odd generalized exponential-gompertz
     @staticmethod
     def ppf(a,b,c,l,q):
         return 1/c*math.log(1+c/l*math.log(1-1/a*math.log(1-math.pow(q,1/b))))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=oddgenexpgompertz.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'c':ret[2],'l':ret[3]}
 
 '''
 Odd generalized exponentiated linear failure rate distribution
@@ -5675,6 +6839,15 @@ class oddgenexplinearfailurerate(Distribution): #odd generalized exponentiated l
     def ppf(a,b,aa,bb,q):
         i=1+math.log(1/math.pow(1-math.pow(q,1/bb),1/aa))
         return (-a+math.sqrt(a*a+2*b*math.log(i)))/b
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=oddgenexplinearfailurerate.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'aa':ret[2],'bb':ret[3]}
 
 '''
 Odd generalized exponential log-logistic distribution
@@ -5698,6 +6871,15 @@ class oddgenexploglog(Distribution): #odd generalized exponential log-logistic
     @staticmethod
     def ppf(g,l,s,t,q):
         return s*math.pow(-l*math.log(1-math.pow(q,1/g)),1/t)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=oddgenexploglog.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'g':ret[0],'l':ret[1],'s':ret[2],'t':ret[3]}
 
 '''
 Odds generalized exponential-exponential distribution
@@ -5718,6 +6900,15 @@ class oddsgenexpexp(Distribution): #odds generalized exponential-exponential
     @staticmethod
     def ppf(l,t,q):
         return math.log(1-math.log(1-q)/l)/t
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=oddsgenexpexp.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'l':ret[0],'t':ret[1]}
 
 '''
 Paralogistic distribution*
@@ -5734,76 +6925,76 @@ class pareto(Distribution):
     @staticmethod
     def pdf(aa,xm,x):
         if(alpha<=0 or xm<=0):
-            raise InvalidInputError("alpha and xm must be positive")
+            raise ValueError("alpha and xm must be positive")
         if(x<xm):
-            raise InvalidInputError("x must be greater than or equal to xm")
+            raise ValueError("x must be greater than or equal to xm")
         return alpha*math.pow(xm,alpha)/math.pow(x,alpha+1)
     @staticmethod
     def cdf(aa,xm,x):
         if(alpha<=0 or xm<=0):
-            raise InvalidInputError("alpha and xm must be positive")
+            raise ValueError("alpha and xm must be positive")
         if(x<xm):
-            raise InvalidInputError("x must be greater than or equal to xm")
+            raise ValueError("x must be greater than or equal to xm")
         return 1-math.pow(xm/x,alpha)
     @staticmethod
     def random(aa,xm):
         if(alpha<=0 or xm<=0):
-            raise InvalidInputError("alpha and xm must be positive")
+            raise ValueError("alpha and xm must be positive")
         return xm/math.pow(rg0(),1/alpha)
     @staticmethod
     def kurtosis(aa,xm):
         if(alpha<=0 or xm<=0):
-            raise InvalidInputError("alpha and xm must be positive")
+            raise ValueError("alpha and xm must be positive")
         if(alpha>4):
             return 6*(alpha**3+alpha**2-6*alpha-2)/(alpha*(alpha-3)*(alpha-4))
         return None
     @staticmethod
     def mean(aa,xm):
         if(alpha<=0 or xm<=0):
-            raise InvalidInputError("alpha and xm must be positive")
+            raise ValueError("alpha and xm must be positive")
         if(alpha<=1):
             return float("infinity")
         return alpha*xm/(alpha-1)
     @staticmethod
     def median(aa,xm):
         if(alpha<=0 or xm<=0):
-            raise InvalidInputError("alpha and xm must be positive")
+            raise ValueError("alpha and xm must be positive")
         return xm*math.pow(2,1/alpha)
     @staticmethod
     def mode(aa,xm):
         if(alpha<=0 or xm<=0):
-            raise InvalidInputError("alpha and xm must be positive")
+            raise ValueError("alpha and xm must be positive")
         return xm
     @staticmethod
     def variance(aa,xm):
         if(alpha<=0 or xm<=0):
-            raise InvalidInputError("alpha and xm must be positive")
+            raise ValueError("alpha and xm must be positive")
         if(alpha<=2):
             return float("infinity")
         return (xm**2)*alpha/((alpha-1)**2*(alpha-2))
     @staticmethod
     def stddev(aa,xm):
         if(alpha<=0 or xm<=0):
-            raise InvalidInputError("alpha and xm must be positive")
+            raise ValueError("alpha and xm must be positive")
         if(alpha<=2):
             return float("infinity")
         return xm*math.sqrt(alpha/(alpha-2))/(alpha-1)
     @staticmethod
     def entropy(aa,xm):
         if(alpha<=0 or xm<=0):
-            raise InvalidInputError("alpha and xm must be positive")
+            raise ValueError("alpha and xm must be positive")
         return math.log((xm/alpha)*math.exp(1+1/alpha))
     @staticmethod
     def skewness(aa,xm):
         if(alpha<=0 or xm<=0):
-            raise InvalidInputError("alpha and xm must be positive")
+            raise ValueError("alpha and xm must be positive")
         if(alpha>3):
             return 2*(1+alpha)/(alpha-3)*math.sqrt((alpha-2)/alpha)
         return None
     @staticmethod
     def ppf(aa,xm,q):
         if(alpha<=0 or xm<=0):
-            raise InvalidInputError("alpha and xm must be positive")
+            raise ValueError("alpha and xm must be positive")
         return xm/math.pow(q,1/alpha)
     @staticmethod
     def mle(x):
@@ -5824,7 +7015,7 @@ class pareto2var(Distribution): #shifted pareto
         return b/a*math.pow(a/(x+a-c),b+1)
     @staticmethod
     def cdf(a,b,c,x):
-        return 1-math.pow(a/(y+a-c),b)
+        return 1-math.pow(a/(x+a-c),b)
     @staticmethod
     def kurtosis(a,b,c):
         return 3*a**4*b*(3*b**2+b+2)/((b-4)*(b-3)*(b-2)*(b-1)**4)
@@ -5849,6 +7040,15 @@ class pareto2var(Distribution): #shifted pareto
     @staticmethod
     def ppf(a,b,c,q):
         return a*(1/(math.pow(q,b))-1)+c
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=pareto2var.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'c':ret[2]}
 
 '''
 Pareto III distribution*
@@ -5903,6 +7103,16 @@ class planck(Distribution):
     @staticmethod
     def ppf(l,q):
         return math.ceil(-math.log(1-q)/l-1)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=planck.pdf(args_[0],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1),method='Nelder-Mead').x.tolist()
+        return {'l':ret[0]}
+
 
 '''
 Poisson distribution
@@ -5911,14 +7121,14 @@ class poisson(Distribution):
     @staticmethod
     def pdf(lmbda,k):
         if(lmbda<=0):
-            raise InvalidInputError("lambda must be positive")
+            raise ValueError("lambda must be positive")
         if(k%1!=0 or k<0):
-            raise InvalidInputError("k must be a non-negative integer")
+            raise ValueError("k must be a non-negative integer")
         return math.pow(lmbda,k)*math.exp(-lmbda)/math.factorial(k)
     @staticmethod
     def random(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lambda must be positive")
+            raise ValueError("lambda must be positive")
         l=math.exp(-lmbda)
         k=0
         p=1
@@ -5929,37 +7139,37 @@ class poisson(Distribution):
     @staticmethod
     def kurtosis(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lambda must be positive")
+            raise ValueError("lambda must be positive")
         return 1/lmbda
     @staticmethod
     def mean(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lambda must be positive")
+            raise ValueError("lambda must be positive")
         return lmbda
     @staticmethod
     def median(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lambda must be positive")
+            raise ValueError("lambda must be positive")
         return math.floor(lmbda+1/3-0.02/lmbda)
     @staticmethod
     def mode(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lambda must be positive")
+            raise ValueError("lambda must be positive")
         return (math.floor(lmbda)-1,math.floor(lmbda))
     @staticmethod
     def variance(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lambda must be positive")
+            raise ValueError("lambda must be positive")
         return lmbda
     @staticmethod
     def stddev(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lambda must be positive")
+            raise ValueError("lambda must be positive")
         return math.sqrt(lmbda)
     @staticmethod
     def skewness(lmbda):
         if(lmbda<=0):
-            raise InvalidInputError("lambda must be positive")
+            raise ValueError("lambda must be positive")
         return math.sqrt(1/lmbda)
     @staticmethod
     def mle(x):
@@ -5987,11 +7197,12 @@ class poissonexp(Distribution): #poisson exponential
         return -math.log(-math.log(1-(1-math.exp(-t))*q)/t)/l
     @staticmethod
     def mle(x):
-        #args_ - [l,t]
-        args0=[1,1]
-        n=len(x)
-        func = lambda args_,x,n: n*math.log(args_[1]*args_[0])-args_[0]*sum(x)-args_[1]*np.sum(np.exp(-args_[0]*x))-n*math.log(1-math.exp(-args_[1]))
-        ret=op.basinhopping(func,args0)
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=poissonexp.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
         return {'l':ret[0],'t':ret[1]}
 
 '''
@@ -6066,7 +7277,7 @@ class qexp(Distribution): #q-exponential
     def cdf(q1,lmbda,x):
         return 1-qexp(-lmbda*x/(1/(2-q1)),1/(2-q1))
     @staticmethod
-    def kurtosis(q,lmbda):
+    def kurtosis(q1,lmbda):
         if(q1<6/5):
             return 6*(-4*q1**3+17*q1**2-20*q1+6)/((q1-2)*(4*q1-5)*(5*q1-6))
         return None
@@ -6100,6 +7311,15 @@ class qexp(Distribution): #q-exponential
     @staticmethod
     def ppf(q1,lmbda,q):
         return (-(1/(2-q1))*qlog(q,1/(2-q1)))/lmbda
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=qexp.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'q1':ret[0],'lambda':ret[1]}
 
 '''
 Q-Gaussian distribution
@@ -6122,12 +7342,12 @@ class rademacher(Distribution):
     @staticmethod
     def pdf(k):
         if(k!=-1 or k!=1):
-            raise InvalidInputError("k must be -1 or 1")
+            raise ValueError("k must be -1 or 1")
         return 1/2
     @staticmethod
     def cdf(k):
         if(k!=-1 or k!=1):
-            raise InvalidInputError("k must be -1 or 1")
+            raise ValueError("k must be -1 or 1")
         return 1/2+(1+k)/4
     @staticmethod
     def random():
@@ -6172,52 +7392,61 @@ class raisedcosine(Distribution):
     @staticmethod
     def pdf(mu,s,x):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         if(abs(x-mu)>s):
-            raise InvalidInputError("x must be between mu-s and mu+s")
+            raise ValueError("x must be between mu-s and mu+s")
         return 1/(2*s)*(1+math.cos((x-mu)/s*math.pi))
     @staticmethod
     def cdf(mu,s,x):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         if(abs(x-mu)>s):
-            raise InvalidInputError("x must be between mu-s and mu+s")
+            raise ValueError("x must be between mu-s and mu+s")
         return 1/2*(1+(x-mu)/s+1/math.pi*math.sin((x-mu)/s*math.pi))
     @staticmethod
     def kurtosis(mu,s):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         return 6/5*(90-math.pi**4)/((math.pi**2-6)**2)
     @staticmethod
     def mean(mu,s):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         return mu
     @staticmethod
     def median(mu,s):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         return mu
     @staticmethod
     def mode(mu,s):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         return mu
     @staticmethod
     def variance(mu,s):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         return s**2*(1/3-2/math.pi**2)
     @staticmethod
     def stddev(mu,s):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         return s*math.sqrt(1/3-2/math.pi**2)
     @staticmethod
     def skewness(mu,s):
         if(s<=0):
-            raise InvalidInputError("s must be positive")
+            raise ValueError("s must be positive")
         return 0
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=raisedcosine.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'mu':ret[0],'s':ret[1]}
 
 '''
 Rayleigh distribution
@@ -6226,62 +7455,62 @@ class rayleigh(Distribution):
     @staticmethod
     def pdf(sigma,x):
         if(sigma<=0 or x<0):
-            raise InvalidInputError("sigma must be positive and x must be non-negative")
+            raise ValueError("sigma must be positive and x must be non-negative")
         return x/(sigma**2)*math.exp(-x**2/(2*sigma**2))
     @staticmethod
     def cdf(sigma,x):
         if(sigma<=0 or x<0):
-            raise InvalidInputError("sigma must be positive and x must be non-negative")
+            raise ValueError("sigma must be positive and x must be non-negative")
         return 1-math.exp(-x**2/(2*sigma**2))
     @staticmethod
     def random(sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return sigma*math.sqrt(-2*math.log(rg0()))
     @staticmethod
     def kurtosis(sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return -(6*math.pi**2-24*math.pi+16)/((4-math.pi)**2)
     @staticmethod
     def mean(sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return sigma*math.sqrt(math.pi/2)
     @staticmethod
     def median(sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return sigma*math.sqrt(2*math.log(2))
     @staticmethod
     def mode(sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return sigma
     @staticmethod
     def variance(sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return (4-math.pi)/2*sigma**2
     @staticmethod
     def stddev(sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return math.sqrt((4-math.pi)/2)*sigma
     @staticmethod
     def entropy(sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return 1+math.log(sigma/math.sqrt(2))+np.euler_gamma/2
     @staticmethod
     def skewness(sigma):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return 2*math.sqrt(math.pi)*(math.pi-3)/math.pow(4-math.pi,3/2)
     @staticmethod
     def ppf(sigma,q):
         if(sigma<=0):
-            raise InvalidInputError("sigma must be positive")
+            raise ValueError("sigma must be positive")
         return sigma*math.sqrt(-2*math.log(q))
     @staticmethod
     def mle(x):
@@ -6304,32 +7533,42 @@ class reciprocal(Distribution):
     @staticmethod
     def pdf(a,b,x):
         if(a<=0 or a>=b):
-            raise InvalidInputError("a must be positive and less than b")
+            raise ValueError("a must be positive and less than b")
         if(x<a or x>b):
-            raise InvalidInputError("x must be between a and b inclusive")
+            raise ValueError("x must be between a and b inclusive")
         return 1/(x*(math.log(b)-math.log(a)))
     @staticmethod
     def cdf(a,b,x):
         if(a<=0 or a>=b):
-            raise InvalidInputError("a must be positive and less than b")
+            raise ValueError("a must be positive and less than b")
         if(x<a or x>b):
-            raise InvalidInputError("x must be between a and b inclusive")
+            raise ValueError("x must be between a and b inclusive")
         return (math.log(x)-math.log(a))/(math.log(b)-math.log(a))
     @staticmethod
     def random(a,b):
         if(a<=0 or a>=b):
-            raise InvalidInputError("a must be positive and less than b")
+            raise ValueError("a must be positive and less than b")
         return math.exp(r.random()*(math.log(b)-math.log(a))+math.log(a))
     @staticmethod
     def mean(a,b):
         if(a<=0 or a>=b):
-            raise InvalidInputError("a must be positive and less than b")
+            raise ValueError("a must be positive and less than b")
         return (b-a)/(math.log(b)-math.log(a))
     @staticmethod
     def ppf(a,b,q):
         if(a<=0 or a>=b):
-            raise InvalidInputError("a must be positive and less than b")
+            raise ValueError("a must be positive and less than b")
         return math.exp(q*(math.log(b)-math.log(a))+math.log(a))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=reciprocal.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1]}
+
 
 '''
 Reciprocal-inverse Gaussian distribution
@@ -6341,6 +7580,15 @@ class recipinvgauss(Distribution): #reciprocal-inverse gaussian
     @staticmethod
     def pdf(mu,x):
         return 1/math.sqrt(2*math.pi*x)*math.exp(-(1-mu*x)**2/(2*x*mu**2))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=recipinvgauss.pdf(args_[0],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1),method='Nelder-Mead').x.tolist()
+        return {'mu':ret[0]}
 
 '''
 Rectified normal distribution*
@@ -6364,7 +7612,7 @@ class reflectedpower(Distribution):
     def median(c):
         return 1-math.pow(1/2,1/c)
     @staticmethod
-    def random(c,q):
+    def ppf(c,q):
         return 1-math.pow(1-q,1/c)
 
 '''
@@ -6451,6 +7699,15 @@ class scaledinvchi2(Distribution): #scaled inverse chi-squared
     def skewness(nu,t2):
         if(nu>6):
             return 4/(nu-6)*math.sqrt(2*(nu-4))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=scaledinvchi2.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'nu':ret[0],'t2':ret[1]}
 
 '''
 Shifted Gompertz distribution
@@ -6458,7 +7715,7 @@ Shifted Gompertz distribution
 class shiftedgompertz(Distribution):
     @staticmethod
     def random(b,eta):
-        return max(exp.random(b),gumbel.random(b,eta))
+        return max(exponential.random(b),gumbel.random(b,eta))
     @staticmethod
     def pdf(b,eta,x):
         return b*math.exp(-b*x)*math.exp(-eta*math.exp(-b*x))*(1+eta*(1-math.exp(-b*x)))
@@ -6471,6 +7728,15 @@ class shiftedgompertz(Distribution):
             return 0
         z=(3+eta-math.sqrt(eta**2+2*eta+5))/(2*eta)
         return (-1/b)*math.log(z)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=shiftedgompertz.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'b':ret[0],'eta':ret[1]}
 
 '''
 Shifted log-logistic distribution
@@ -6490,7 +7756,7 @@ class shiftedloglogistic(Distribution):
         return 1/(1+math.pow(1+xi*z,-1/xi))
     @staticmethod
     def mean(xi,mu,sigma):
-        return mu+sigma/xi*(math.pi*xi*math.csc(math.pi*xi)-1)
+        return mu+sigma/xi*(math.pi*xi/math.sin(math.pi*xi)-1)
     @staticmethod
     def median(xi,mu,sigma):
         return mu
@@ -6500,13 +7766,23 @@ class shiftedloglogistic(Distribution):
     @staticmethod
     def variance(xi,mu,sigma):
         aa=math.pi*xi
-        return sigma**2/xi**2*(2*aa*math.csc(2*aa)-(aa*math.csc(aa))**2)
+        return sigma**2/xi**2*(2*aa/math.sin(2*aa)-(aa/math.sin(aa))**2)
     @staticmethod
     def stddev(xi,mu,sigma):
-        return sigma/xi*math.sqrt(2*aa*math.csc(2*aa)-(aa*math.csc(aa))**2)
+        aa=math.pi*xi
+        return sigma/xi*math.sqrt(2*aa/math.sin(2*aa)-(aa/math.sin(aa))**2)
     @staticmethod
     def ppf(xi,mu,sigma,q):
         return (math.pow(1/n-2,-xi)*(xi*mu*math.pow(1/q-2,xi)+sigma))/xi
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=shiftedloglogistic.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'xi':ret[0],'mu':ret[1],'sigma':ret[2]}
 
 '''
 Skellam distribution
@@ -6570,10 +7846,11 @@ class skewlogistic(Distribution):
 '''
 Skew normal distribution
 '''
-class skewnormal(Distribution):
+'''class skewnormal(Distribution):
     @staticmethod
     def random(a):
         return st.skewnorm.rvs(a)
+'''
 
 '''
 Slash distribution
@@ -6660,7 +7937,7 @@ class suzuki(Distribution):
         return math.sqrt(math.exp(2*mu+nu**2)*(2*math.exp(nu**2)-math.pi/2))
     @staticmethod
     def skewness(mu,nu):
-        return 2*math.sqrt(pi)*(-6*math.exp(nu**2)+3*math.exp(3*nu**2)+math.pi)/math.pow(4*math.exp(nu**2)-math.pi,3/2)
+        return 2*math.sqrt(math.pi)*(-6*math.exp(nu**2)+3*math.exp(3*nu**2)+math.pi)/math.pow(4*math.exp(nu**2)-math.pi,3/2)
 
 '''
 Symmetric Prentice distribution*
@@ -6717,6 +7994,15 @@ class t(Distribution):
         if(nu>3):
             return 0
         return None
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=t.pdf(args_[0],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1),method='Nelder-Mead').x.tolist()
+        return {'nu':ret[0]}
 
 '''
 Topp-Leone Distribution
@@ -6737,6 +8023,16 @@ class toppleone(Distribution):
     @staticmethod
     def ppf(bb,q):
         return 1-math.sqrt(1-math.pow(q,1/bb))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=toppleone.pdf(args_[0],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1),method='Nelder-Mead').x.tolist()
+        return {'bb':ret[0]}
+
 
 '''
 Transmuted complementary Weibull-geometric distribution
@@ -6755,6 +8051,15 @@ class transmutedcompweibullgeo(Distribution): #transmuted complementary weibull 
     @staticmethod
     def ppf(a,b,d,g,q):
         return math.pow(math.log((2*a*a-2*a*q*(a-1)-a*(1+d)+a*math.sqrt(1+d*(d-4*q+2)))/(2*a*a*(1-q))),1/b)/g
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=transmutedcompweibullgeo.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'d':ret[2],'g':ret[3]}
 
 '''
 Transmuted exponentiated exponential distribution
@@ -6769,7 +8074,7 @@ class transmutedexponentiatedexp(Distribution): #transmuted exponentiated expone
         i=((1+l)-math.sqrt((1+l)**2-2*l))/(2*l)
         return -math.log(1-math.pow(i,1/a))/g
     @staticmethod
-    def random(a,g,l,q):
+    def ppf(a,g,l,q):
         i=((1+l)-math.sqrt((1+l)**2-4*l*q))/(2*l)
         return -math.log(1-math.pow(i,1/a))/g
 
@@ -6793,6 +8098,15 @@ class transmutedexponentiatedfrechet(Distribution):
     @staticmethod
     def ppf(a,b,l,t,q):
         return t*math.pow(-math.log(1-math.pow(((l-1)+math.sqrt((l+1)**2)-4*l*q)/2*l,1/a)),-1/b)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=transmutedexponentiatedfrechet.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'l':ret[2],'t':ret[3]}
 
 '''
 Transmuted exponentiated Lomax distribution
@@ -6820,6 +8134,15 @@ class transmutedexponentiatedlomax(Distribution): #transmuted exponentiated loma
     def ppf(a,g,l,t,q):
         i=(1+l-math.sqrt((1+l)**2-4*l*q))/(2*l)
         return (math.pow(1-math.pow(i,1/a),-1/t)-1)/g
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=transmutedexponentiatedlomax.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'g':ret[1],'l':ret[2],'t':ret[3]}
 
 '''
 Transmuted generalized linear failure rate distribution
@@ -6860,6 +8183,15 @@ class transmutedgenrayleigh(Distribution): #transmuted generalized rayleigh
     def ppf(a,b,l,q):
         i=((1+l)-math.sqrt((1+l)**2-4*l*q))/(2*l)
         return math.sqrt(-math.log(1-math.pow(i,1/a))/b)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=transmutedgenrayleigh.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'l':ret[2]}
 
 '''
 Transmuted inverse exponential distribution
@@ -6891,6 +8223,15 @@ class transmutedkumaraswamy(Distribution):
     @staticmethod
     def ppf(a,l,t,q):
         return math.pow(1-math.pow(1-((1+l)-math.sqrt((1+l)**2-4*l*q))/(2*l),1/t),1/a)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=transmutedkumaraswamy.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'l':ret[1],'t':ret[2]}
 
 '''
 Transmuted modified inverse Rayleigh distribution
@@ -6911,6 +8252,16 @@ class transmutedmodifiedinvrayleigh(Distribution): #transmuted modified inverse 
     @staticmethod
     def ppf(a,b,l,q):
         return 2*b/(-a+math.sqrt(a**2-4*b*math.log(((1+l)-math.sqrt((1+l)**2)-4*l*q)/(2*l))))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=transmutedmodifiedinvrayleigh.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'l':ret[2]}
+
 
 '''
 Transmuted Weibull-Lomax distribution
@@ -6947,6 +8298,15 @@ class transmutedweibulllomax(Distribution):
         else:
             D=((1+l)-math.sqrt((1+l)**2-4*l*q))/(2*l)
         return bb*(math.pow(math.pow(math.log(math.pow(1-D,-1/a)),1/b)+1,1/aa)-1)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=transmutedweibulllomax.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'aa':ret[2],'bb':ret[3]}
 
 '''
 Triangular distribution
@@ -6955,9 +8315,9 @@ class triangular(Distribution):
     @staticmethod
     def pdf(a,b,c,x):
         if(b>=a or a>c or c>b):
-            raise InvalidInputError("b must be greater than c, which must be greater than a")
+            raise ValueError("b must be greater than c, which must be greater than a")
         if(x>a or b>x):
-            raise InvalidInputError("x must be between a and b, inclusive")
+            raise ValueError("x must be between a and b, inclusive")
         if(x<c):
             return 2*(x-a)/((b-a)*(c-a))
         if(x==c):
@@ -6967,9 +8327,9 @@ class triangular(Distribution):
     @staticmethod
     def cdf(a,b,c,x):
         if(b>=a or a>c or c>b):
-            raise InvalidInputError("b must be greater than c, which must be greater than a")
+            raise ValueError("b must be greater than c, which must be greater than a")
         if(x>a or b>x):
-            raise InvalidInputError("x must be between a and b, inclusive")
+            raise ValueError("x must be between a and b, inclusive")
         if(x<=c):
             return (x-a)**2/((b-a)*(c-a))
         if(c<x and x<b):
@@ -6979,7 +8339,7 @@ class triangular(Distribution):
     @staticmethod
     def random(a,b,c):
         if(b>=a or a>c or c>b):
-            raise InvalidInputError("b must be greater than c, which must be greater than a")
+            raise ValueError("b must be greater than c, which must be greater than a")
         n=r.random()
         f=(c-a)/(b-a)
         if(n<=f):
@@ -6988,61 +8348,72 @@ class triangular(Distribution):
     @staticmethod
     def kurtosis(a,b,c):
         if(b>=a or a>c or c>b):
-            raise InvalidInputError("b must be greater than c, which must be greater than a")
+            raise ValueError("b must be greater than c, which must be greater than a")
         return -3/5
     @staticmethod
     def mean(a,b,c):
         if(b>=a or a>c or c>b):
-            raise InvalidInputError("b must be greater than c, which must be greater than a")
+            raise ValueError("b must be greater than c, which must be greater than a")
         return (a+b+c)/3
     @staticmethod
     def median(a,b,c):
         if(b>=a or a>c or c>b):
-            raise InvalidInputError("b must be greater than c, which must be greater than a")
+            raise ValueError("b must be greater than c, which must be greater than a")
         if(c>=(a+b)/2):
             return a+math.sqrt((b-a)*(c-a)/2)
         return b-math.sqrt((b-a)*(b-c)/2)
     @staticmethod
     def mode(a,b,c):
         if(b>=a or a>c or c>b):
-            raise InvalidInputError("b must be greater than c, which must be greater than a")
+            raise ValueError("b must be greater than c, which must be greater than a")
         return c
     @staticmethod
     def variance(a,b,c):
         if(b>=a or a>c or c>b):
-            raise InvalidInputError("b must be greater than c, which must be greater than a")
+            raise ValueError("b must be greater than c, which must be greater than a")
         return (a**2+b**2+c**2-a*b-a*c-b*c)/18
     @staticmethod
     def stddev(a,b,c):
         if(b>=a or a>c or c>b):
-            raise InvalidInputError("b must be greater than c, which must be greater than a")
+            raise ValueError("b must be greater than c, which must be greater than a")
         return math.sqrt((a**2+b**2+c**2-a*b-a*c-b*c)/18)
     @staticmethod
     def entropy(a,b,c):
         if(b>=a or a>c or c>b):
-            raise InvalidInputError("b must be greater than c, which must be greater than a")
+            raise ValueError("b must be greater than c, which must be greater than a")
         return 1/2+math.log((b-a)/2)
     @staticmethod
     def skewness(a,b,c):
         if(b>=a or a>c or c>b):
-            raise InvalidInputError("b must be greater than c, which must be greater than a")
+            raise ValueError("b must be greater than c, which must be greater than a")
         return math.sqrt(2)*(a+b-2*c)*(2*a-b-c)*(a-2*b+c)/(5*math.pow(a**2+b**2+c**2-a*b-a*c-b*c,3/2))
     @staticmethod
     def ppf(a,b,c,q):
         if(b>=a or a>c or c>b):
-            raise InvalidInputError("b must be greater than c, which must be greater than a")
+            raise ValueError("b must be greater than c, which must be greater than a")
         f=(c-a)/(b-a)
         if(q<=f):
             return a+math.sqrt(q*(b-a)*(c-a))
         return b-math.sqrt((1-q)*(b-a)*(c-a))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=triangular.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'c':ret[2]}
+
 
 '''
 Truncated exponential distribution
 '''
-class truncexp(Distribution): #truncated exponential
+'''class truncexp(Distribution): #truncated exponential
     @staticmethod
     def random(b):
         return st.truncexp.rvs(b)
+'''
 
 '''
 Truncated normal distribution (truncated on both ends)*
@@ -7093,7 +8464,7 @@ class tsallisq(Distribution):
             return -math.log(1/2)/lmbda
         return -(1-math.pow(1/2,1/(-2+q1))+math.pow(1/2,1/(-2+q1))/2)/((-1+q1)*lmbda)
     @staticmethod
-    def random(lmbda,q1):
+    def ppf(lmbda,q1,q):
         if(q1==1):
             return -math.log(1-q)/lmbda
         return -(1-math.pow(1-q,1/(-2+q1))+math.pow(1-q,1/(-2+q1))*q)/((-1+q1)*lmbda)
@@ -7147,61 +8518,61 @@ class uniform(Distribution):
     @staticmethod
     def pdf(a,b,x):
         if(b<=a):
-            raise InvalidInputError("b must be greater than a")
+            raise ValueError("b must be greater than a")
         if(x<a or x>b):
-            raise InvalidInputError("x must be between a and b inclusive")
+            raise ValueError("x must be between a and b inclusive")
         return 1/(b-a)
     @staticmethod
     def cdf(a,b,x):
         if(b<=a):
-            raise InvalidInputError("b must be greater than a")
+            raise ValueError("b must be greater than a")
         if(x<a or x>b):
-            raise InvalidInputError("x must be between a and b inclusive")
+            raise ValueError("x must be between a and b inclusive")
         return (x-a)/(b-a)
     @staticmethod
     def random(a,b):
         if(b<=a):
-            raise InvalidInputError("b must be greater than a")
+            raise ValueError("b must be greater than a")
         return ((b-a)*r.random()+a)
     @staticmethod
     def kurtosis(a,b):
         if(b<=a):
-            raise InvalidInputError("b must be greater than a")
+            raise ValueError("b must be greater than a")
         return -6/5
     @staticmethod
     def mean(a,b):
         if(b<=a):
-            raise InvalidInputError("b must be greater than a")
+            raise ValueError("b must be greater than a")
         return 1/2*(a+b)
     @staticmethod
     def median(a,b):
         if(b<=a):
-            raise InvalidInputError("b must be greater than a")
+            raise ValueError("b must be greater than a")
         return 1/2*(a+b)
     @staticmethod
     def variance(a,b):
         if(b<=a):
-            raise InvalidInputError("b must be greater than a")
+            raise ValueError("b must be greater than a")
         return 1/12*((b-a)**2)
     @staticmethod
     def stddev(a,b):
         if(b<=a):
-            raise InvalidInputError("b must be greater than a")
+            raise ValueError("b must be greater than a")
         return 1/math.sqrt(12)*(b-a)
     @staticmethod
     def entropy(a,b):
         if(b<=a):
-            raise InvalidInputError("b must be greater than a")
+            raise ValueError("b must be greater than a")
         return math.log(b-a)
     @staticmethod
     def skewness(a,b):
         if(b<=a):
-            raise InvalidInputError("b must be greater than a")
+            raise ValueError("b must be greater than a")
         return 0
     @staticmethod
     def ppf(a,b,q):
         if(b<=a):
-            raise InvalidInputError("b must be greater than a")
+            raise ValueError("b must be greater than a")
         return ((b-a)*q+a)
     @staticmethod
     def mle(x):
@@ -7260,6 +8631,15 @@ class upower(Distribution):
     @staticmethod
     def ppf(k,q):
         return math.pow((2*q-1),1/(2*k+1))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=upower.pdf(args_[0],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1),method='Nelder-Mead').x.tolist()
+        return {'k':ret[0]}
 
 '''
 Upsilon distribution
@@ -7331,26 +8711,26 @@ class weibull(Distribution):
     @staticmethod
     def pdf(k,lmbda,x):
         if(lmbda<=0 or k<=0):
-            raise InvalidInputError("k and lambda must be positive")
+            raise ValueError("k and lambda must be positive")
         if(x<0):
-            raise InvalidInputError("x must be non-negative")
+            raise ValueError("x must be non-negative")
         return k/lmbda*math.pow(x/lmbda,k-1)*math.exp(-math.pow(x/lmbda,k))
     @staticmethod
     def cdf(k,lmbda,x):
         if(lmbda<=0 or k<=0):
-            raise InvalidInputError("k and lambda must be positive")
+            raise ValueError("k and lambda must be positive")
         if(x<0):
-            raise InvalidInputError("x must be non-negative")
+            raise ValueError("x must be non-negative")
         return 1-math.exp(-math.pow(x/lmbda,k))
     @staticmethod
     def random(k,lmbda):
         if(lmbda<=0 or k<=0):
-            raise InvalidInputError("k and lambda must be positive")
+            raise ValueError("k and lambda must be positive")
         return lmbda*math.pow((-math.log(rg0())),1/k)
     @staticmethod
     def kurtosis(k,lmbda):
         if(lmbda<=0 or k<=0):
-            raise InvalidInputError("k and lambda must be positive")
+            raise ValueError("k and lambda must be positive")
         g1=math.gamma(1+1/k)
         g2=math.gamma(1+2/k)
         g3=math.gamma(1+3/k)
@@ -7359,45 +8739,54 @@ class weibull(Distribution):
     @staticmethod
     def mean(k,lmbda):
         if(lmbda<=0 or k<=0):
-            raise InvalidInputError("k and lambda must be positive")
+            raise ValueError("k and lambda must be positive")
         return lmbda*math.gamma(1+1/k)
     @staticmethod
     def median(k,lmbda):
         if(lmbda<=0 or k<=0):
-            raise InvalidInputError("k and lambda must be positive")
+            raise ValueError("k and lambda must be positive")
         return lmbda*math.pow(math.log(2),1/k)
     @staticmethod
     def mode(k,lmbda):
         if(lmbda<=0 or k<=0):
-            raise InvalidInputError("k and lambda must be positive")
+            raise ValueError("k and lambda must be positive")
         if(k>1):
             return lmbda*math.pow((k-1)/k,1/k)
         return 0
     @staticmethod
     def variance(k,lmbda):
         if(lmbda<=0 or k<=0):
-            raise InvalidInputError("k and lambda must be positive")
+            raise ValueError("k and lambda must be positive")
         return lmbda**2*(math.gamma(1+2/k)-(math.gamma(1+1/k)**2))
     @staticmethod
     def stddev(k,lmbda):
         if(lmbda<=0 or k<=0):
-            raise InvalidInputError("k and lambda must be positive")
+            raise ValueError("k and lambda must be positive")
         return lmbda*math.sqrt(math.gamma(1+2/k)-(math.gamma(1+1/k)**2))
     @staticmethod
     def entropy(k,lmbda):
         if(lmbda<=0 or k<=0):
-            raise InvalidInputError("k and lambda must be positive")
+            raise ValueError("k and lambda must be positive")
         return np.euler_gamma*(1-1/k)+math.log(lmbda/k)+1
     @staticmethod
     def skewness(k,lmbda):
         if(lmbda<=0 or k<=0):
-            raise InvalidInputError("k and lambda must be positive")
+            raise ValueError("k and lambda must be positive")
         return (math.gamma(1+3/k)*lmbda**3-3*weibull.mean(k,lmbda)*weibull.variance(k,lmbda)-weibull.mean(k,lmbda)**3)/math.pow(weibull.variance,3/2)
     @staticmethod
     def ppf(k,lmbda,q):
         if(lmbda<=0 or k<=0):
-            raise InvalidInputError("k and lambda must be positive")
+            raise ValueError("k and lambda must be positive")
         return lmbda*math.pow((-math.log(q)),1/k)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=weibull.pdf(args_[0],args_[1],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1),method='Nelder-Mead').x.tolist()
+        return {'k':ret[0],'lambda':ret[1]}
 
 '''
 Weibull-Burr XII distribution*
@@ -7433,6 +8822,15 @@ class weibullfrechet(Distribution):
     @staticmethod
     def ppf(a,b,aa,bb,q):
         return aa*math.pow(math.log(1+math.pow(-math.log(1-q)/a,-1/b)),-1/bb)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=weibullfrechet.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'aa':ret[2],'bb':ret[3]}
 
 '''
 Weibull-generalized exponential distribution
@@ -7453,6 +8851,16 @@ class weibullgenexp(Distribution): #weibull-generalized exponential
     @staticmethod
     def ppf(a,b,l,q):
         return 1/l*math.log(1+math.pow(1/a*math.log(1-q),1/b))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=weibullgenexp.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'l':ret[2]}
+
 
 '''
 Weibull-Lomax distribution
@@ -7473,6 +8881,15 @@ class weibulllomax(Distribution):
     @staticmethod
     def ppf(a,b,aa,bb,q):
         return bb*(math.pow(math.pow(-math.log(1-q)/a,1/b)+1,1/aa)-1)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=weibulllomax.pdf(args_[0],args_[1],args_[2],args_[3],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'aa':ret[2],'bb':ret[3]}
 
 '''
 Weibull-uniform distribution
@@ -7493,6 +8910,15 @@ class weibulluniform(Distribution):
     @staticmethod
     def ppf(a,b,t,q):
         return t/(1+math.pow(-math.log(1-q)/a,-1/b))
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=weibulluniform.pdf(args_[0],args_[1],args_[2],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1,1,1),method='Nelder-Mead').x.tolist()
+        return {'a':ret[0],'b':ret[1],'t':ret[2]}
 
 '''
 Weibull-Weibull distribution*
@@ -7500,7 +8926,7 @@ Weibull-Weibull distribution*
 class weibullweibull(Distribution):
     @staticmethod
     def random(a,b,g,l):
-        return math.pow(math.log(math.pow(-math.log(1-u)/a,1/b)+1)/l,1/g)
+        return math.pow(math.log(math.pow(-math.log(1-rg0())/a,1/b)+1)/l,1/g)
     @staticmethod
     def median(a,b,g,l):
         return math.pow(math.log(math.pow(-math.log(1/2)/a,1/b)+1)/l,1/g)
@@ -7523,7 +8949,7 @@ class xgamma(Distribution):
     @staticmethod
     def random(t):
         u=rg0()
-        v=exp.random(t)
+        v=exponential.random(t)
         w=gamma.random(3,t)
         if(u<=t/(1+t)):
             return v
@@ -7539,6 +8965,15 @@ class xgamma(Distribution):
         if(0<t and t<1/2):
            return (1+math.sqrt(1-2*t))/t
         return 0
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=xgamma.pdf(args_[0],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1),method='Nelder-Mead').x.tolist()
+        return {'t':ret[0]}
 
 '''
 Yule-Simon distribution
@@ -7547,11 +8982,12 @@ class yulesimon(Distribution):
     @staticmethod
     def random(rho):
         a=r.random()
-        i=0
+        i=1
         while True:
             b=1-i*sp.beta(i,a+1)
             if(b>a):
                 return i
+            i+=1
     @staticmethod
     def pdf(rho,x):
         return rho*sp.beta(x,rho+1)
@@ -7581,6 +9017,15 @@ class yulesimon(Distribution):
     def skewness(rho):
         if(rho>3):
             return (rho+1)**2*math.sqrt(rho-2)/((rho-3)*rho)
+    @staticmethod
+    def mle(x):
+        def mlefunc(args_):
+            tomin=1
+            for i in x:
+                tomin*=yulesimon.pdf(args_[0],i)
+            return -tomin
+        ret=op.minimize(mlefunc,(1),method='Nelder-Mead').x.tolist()
+        return {'rho':ret[0]}
 
 '''
 Zero-inflated negative binomial-generalized exponential distribution*
@@ -7590,7 +9035,7 @@ class zeroinflatednegbingenexp(Distribution): #zero-inflated negative binomial-g
     def random(a,b,f,r):
         u=rg0()
         l=-1/b*math.log(1-math.pow(u,1/a))
-        y=rnegbin(r,math.exp(-l))
+        y=negbin.random(r,math.exp(-l))
         uu=rg0()
         if(uu>f):
             return y
@@ -7619,19 +9064,3 @@ class zipf(Distribution):
     @staticmethod
     def random(a):
         return st.zipf.rvs(a)
-
-#print(-(np.sum(1*(1-np.power(np.array((1,3)),1))/1)+(1-1)*np.sum(np.log((1,3)))-2*math.log(1)+2*math.log(1)+1*np.sum(np.log((1,3)))))
-
-print(amoroso.mle((1,3,9,2,15,239)))
-
-#x=(1,3,5,9)
-#args0=[2,2]
-#n=len(x)
-#print(-(np.sum(2*(1-np.power(np.array(x),2))/2)))
-#print (2-1)*np.sum(np.log(x))
-#print n*math.log(2)+n*math.log(2)+2*np.sum(np.log(x))
-#func = lambda args_: -(np.sum(args_[0]*(1-np.power(np.array(x),args_[1]))/args_[1])+(args_[1]-1)*np.sum(np.log(x))-n*math.log(args_[1])+n*math.log(args_[0])+args_[1]*np.sum(np.log(x)))
-#ret=op.differential_evolution(func,[(1e-12,100),(1e-12,100)])
-#print(ret.x)
-
-
