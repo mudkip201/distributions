@@ -45,7 +45,7 @@ class logdagum(Distribution):
         e3=4*(math.log(l)+sp.digamma(b)-sp.digamma(1))*(sp.polygamma(4,b)-sp.polygamma(4,1))
         e4=6*(math.log(l)+sp.digamma(b)-sp.digamma(1))**2*(sp.polygamma(3,b)+sp.polygamma(3,1))
         e5=(math.log(l)+sp.digamma(b)-sp.digamma(1))**4
-        return (e1+e2+e3+e4+e5)/(d**4)-math.pow(logdagum.mean(b,d,l),4)
+        return (e1+e2+e3+e4+e5)/(d**4)/logdagum.variance(b,d,l)**2
     @staticmethod
     def entropy():
         pass
@@ -54,7 +54,7 @@ class logdagum(Distribution):
         e1=sp.polygamma(4,b)-sp.polygamma(4,1)
         e2=math.pow(math.log(l)+sp.digamma(b)-sp.digamma(1),3)
         e3=3*(math.log(l)+sp.digamma(b)-sp.digamma(1))*(sp.polygamma(3,b)+sp.polygamma(3,1))
-        return (e1+e2+e3)/(d**3)-logdagum.mean(b,d,l)**3
+        return ((e1+e2+e3)/(d**3)-3*logdagum.mean(b,d,l)*logdagum.variance(b,d,l)-logdagum.mean(b,d,l)**3)/logdagum.stddev(b,d,l)**3
     @staticmethod
     def ppf(b,d,l,q):
         return math.log(l/(math.pow(q,-1/b)-1))/d

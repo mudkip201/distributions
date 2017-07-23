@@ -26,7 +26,7 @@ class expmodnorm(Distribution): #exponentially modified normal
         return st.norm.cdf(u,0,v)-math.exp(-u+v**2/2+math.log(st.norm.cdf(u,v**2,v)))
     @staticmethod
     def kurtosis(mu,lmbda,sigma2):
-        return 3*(1+2/(sigma2*lmbda**2)+3/(lmbda**4*sigma2**2))/math.pow(1+1/(lmbda**2*sigma2),2)-3
+        return 3*(1+2/(sigma2*lmbda**2)+3/(lmbda**4*sigma2**2))/math.pow(1+1/(lmbda**2*sigma2),2)
     @staticmethod
     def mean(mu,lmbda,sigma2):
         return mu+1/lmbda

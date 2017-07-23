@@ -6,13 +6,7 @@ Created on Jul 16, 2017
 
 
 import dists.Distribution.Distribution as Distribution
-import dists.Distribution as ds
-import math
-import numpy as np
 from numpy import random as r
-import scipy.stats as st
-import scipy.special as sp
-import scipy.optimize as op
 
 class multinomial(Distribution): #probs is the array of probabilities (does not have to sum to 1 - rescaling happens inside the function)
     @staticmethod

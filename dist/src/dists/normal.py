@@ -9,10 +9,6 @@ import dists.Distribution.Distribution as Distribution
 import dists.Distribution as ds
 import math
 import numpy as np
-from numpy import random as r
-import scipy.stats as st
-import scipy.special as sp
-import scipy.optimize as op
 
 class normal(Distribution):
     @staticmethod
@@ -40,7 +36,7 @@ class normal(Distribution):
     def kurtosis(mu,sigma2):
         if(sigma2<=0):
             raise ValueError("sigma2 must be positive")
-        return 0
+        return 3
     @staticmethod
     def mean(mu,sigma2):
         if(sigma2<=0):
