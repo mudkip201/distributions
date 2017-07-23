@@ -51,3 +51,8 @@ class betaprime(Distribution):
         if(bb>3):
             return 2*(2*aa+bb-1)/(bb-3)*math.sqrt((bb-2)/(aa*(aa+bb-1)))
         return None
+    @staticmethod
+    def kurtosis(aa,bb):
+        if(bb>4):
+            return 3*(bb-2)*(aa**2*(bb+5)*aa*(bb-1)*(bb+5)+2*(bb-1)**2)/(aa*(bb-4)*(bb-3)*(aa+bb-1))
+        return None

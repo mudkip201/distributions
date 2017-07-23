@@ -42,14 +42,18 @@ class yule(Distribution):
         return None
         pass
     @staticmethod
-    def kurtosis():
-        pass
+    def kurtosis(a):
+        if(a>4):
+            return (a-2)*(a*(a*(a+12)-6)+11)/((a-4)*(a-3)*a)
+        return None
     @staticmethod
     def entropy():
         pass
     @staticmethod
-    def skewness():
-        pass
+    def skewness(a):
+        if(a>3):
+            return math.sqrt(a-2)*(a+1)**2/((a-3)*a)
+        return None
     @staticmethod
     def ppf():
         pass
