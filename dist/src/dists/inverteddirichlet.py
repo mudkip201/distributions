@@ -10,12 +10,15 @@ import math
 import numpy as np
 import scipy.special as sp
 
-class dirichletmultinomial(Distribution):
+class inverteddirichlet(Distribution):
     @staticmethod
-    def pdf(a,n,x):
-        ff=math.factorial(n)*sp.gamma(np.sum(a))/sp.gamma(n+np.sum(a))
-        for i in range(a.shape[0]):
-            ff*=sp.gamma(x[i][0]+a[i][0])/(math.factorial(x[i][0])*sp.gamma(a[i][0]))
+    def pdf(nu,K,x):
+        ff=sp.gamma(np.sum(nu))
+        for i in range(K+1):
+            ff/=sp.gamma(nu[i][0])
+        for i in range(K):
+            ff*=math.pow(x[i][0],nu[i][0]-1)
+        ff*=math.pow(1+np.sum(x),-np.sum(nu))
         return ff
     @staticmethod
     def cdf():
@@ -24,8 +27,8 @@ class dirichletmultinomial(Distribution):
     def random():
         pass
     @staticmethod
-    def mean(a,n):
-        return n*a/np.sum(a)
+    def mean():
+        pass
     @staticmethod
     def median():
         pass
@@ -33,16 +36,8 @@ class dirichletmultinomial(Distribution):
     def mode():
         pass
     @staticmethod
-    def variance(a,n):
-        return n*a/np.sum(a)*(1-a/np.sum(a))*((n+np.sum(a))/(1+np.sum(a)))
-    @staticmethod
-    def covariance(a,n):
-        cc=np.dot(a,a.T)
-        for i in range(a.shape[0]):
-            cc[i][i]=0
-        cc/=np.sum(a)**2
-        cc*=(n+np.sum(a))/(1+np.sum(a))
-        return cc
+    def variance():
+        pass
     @staticmethod
     def stddev():
         pass

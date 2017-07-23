@@ -23,8 +23,8 @@ class multivariatenormal(Distribution):
     def random(m,S):
         A=np.asmatrix(la.sqrtm(S))
         z=np.zeros(m.shape)
-        for i in range(m.shape[1]):
-            z[0][i]=normal.random(0,1)
+        for i in range(m.shape[0]):
+            z[i][0]=normal.random(0,1)
         return m+np.dot(A,z)
     @staticmethod
     def mean(m,S):
@@ -59,8 +59,8 @@ class multivariatenormal(Distribution):
         xx=x.T
         estm=np.average(x,axis=0)
         estS=0
-        for i in range(x.dims[0]):
+        for i in range(x.dims[1]):
             xi=xx[i].T
             estS+=np.dot((xi-estm).T,(xi-estm))
-        estS/=x.dims[0]
+        estS/=x.dims[1]
         return {'mu':estm,'Sigma':estS}

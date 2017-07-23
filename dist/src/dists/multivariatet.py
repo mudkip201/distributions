@@ -13,7 +13,7 @@ import scipy.special as sp
 class MyClass(Distribution):
     @staticmethod
     def pdf(m,S,nu,x):
-        p=S.shape[0]
+        p=S.shape[1]
         ff=sp.gamma((nu+p)/2)/(sp.gamma(nu/2)*math.pow(nu,p/2)*math.pow(math.pi,p/2)*math.sqrt(np.linalg.det(S)))
         ff*math.pow(1+1/nu*np.dot(np.dot((x-m).T,S.I),x-m),-(nu+p)/2)
         pass
