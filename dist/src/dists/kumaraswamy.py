@@ -57,6 +57,21 @@ class kumaraswamy(Distribution):
         if(a<=0 or b<=0):
             raise ValueError("a and b must be positive")
     @staticmethod
+    def skewness(a,b):
+        return b*math.gamma(b)*(a**3*math.gamma((a+3)/a)/math.gamma(b+3/a+1)-6*a*math.gamma(1/a)*math.gamma(2/a)*math.gamma(b+1)/(math.gamma(b+1/a+1)*math.gamma(b+2/a+1))+2*math.gamma(1/a)**3*math.gamma(b+1)**2/math.gamma(b+1/a+1)**3)/(a**3*math.pow(math.gamma(1+2/a)*math.gamma(b+1)/math.gamma(b+2/a+1)-math.gamma(1+1/a)**2*math.gamma(b+1)**2/math.gamma(b+1/a+1)**2,3/2))
+    @staticmethod
+    def kurtosis(a,b):
+        gb4=math.gamma(b+4/a+1)
+        gb3=math.gamma(b+3/a+1)
+        gb2=math.gamma(b+2/a+1)
+        gb1=math.gamma(b+1/a+1)
+        gb=math.gamma(b+1)
+        ga1=math.gamma(1/a)
+        ga2=math.gamma(2/a)
+        ga3=math.gamma(3/a)
+        k=(gb2*(a**4+math.gamma((a+4)/a)*gb1**4*gb2*gb3-3*ga1*gb*(4*a**2*ga3*gb2*gb1**3+ga1*gb*(ga1**2*gb*gb2-4*a*ga2*gb1**2)*gb3)*gb4))
+        k/=gb*(a**4*math.gamma((a+2)/a)**2*gb1**4+ga1**2*gb*gb2*(ga1**2*gb*gb2-4*a*ga2*gb1**2))*gb3*gb4
+    @staticmethod
     def ppf(a,b,q):
         if(a<=0 or b<=0):
             raise ValueError("a and b must be positive")
