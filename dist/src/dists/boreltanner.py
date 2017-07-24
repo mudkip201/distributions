@@ -34,14 +34,14 @@ class boreltanner(Distribution):
     def stddev(a,n):
         return math.sqrt(n*a/(1-a)**3)
     @staticmethod
-    def kurtosis():
-        pass
+    def kurtosis(a,n):
+        return (6*a**2+8*a+1)/(1-a)*a*n+3
     @staticmethod
     def entropy():
         pass
     @staticmethod
-    def skewness():
-        pass
+    def skewness(a,n):
+        return (2*a+1)/math.sqrt((1-a)*a*n)
     @staticmethod
     def ppf():
         pass
