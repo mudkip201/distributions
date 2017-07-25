@@ -9,6 +9,7 @@ import dists.Distribution.Distribution as Distribution
 import math
 import scipy.optimize as op
 import dists.chi.chi as chi
+import scipy.special as sp
 
 class nakagami(Distribution):
     @staticmethod
@@ -29,6 +30,12 @@ class nakagami(Distribution):
     @staticmethod
     def stddev(m,omega):
         return math.sqrt(omega*(1-1/m*(math.gamma(m+1/2)/math.gamma(m))**2))
+    @staticmethod
+    def skewness(m,omega):
+        return (sp.poch(m,1/2)*(1/2-2*(m-sp.poch(m,1/2)**2)))/math.pow(m-sp.poch(m,1/2)**2,3/2)
+    @staticmethod
+    def kurtosis(m,omega):
+        return (m*(4*m+1)-2*(2*m+1)*sp.poch(m,1/2)**2)/(m-sp.poch(m,1/2)**2)**2-3
     @staticmethod
     def mle(x):
         def mlefunc(args_):
