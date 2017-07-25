@@ -8,6 +8,7 @@ Created on Jul 16, 2017
 import dists.Distribution.Distribution as Distribution
 import math
 from numpy import random as r
+import scipy.special as sp
 
 class negbin(Distribution):
     @staticmethod
@@ -24,6 +25,12 @@ class negbin(Distribution):
             else:
                 num_failure+=1
         return num_success
+    @staticmethod
+    def pdf(r,p,k):
+        return sp.binom(k+r-1,k)*math.pow(1-p,r)*math.pow(p,k)
+    @staticmethod
+    def cdf(r,p,k):
+        return 1-sp.betainc(k+1,r,p)
     @staticmethod
     def kurtosis(r,p):
         if(r%1!=0 or r<=0):
