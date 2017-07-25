@@ -9,6 +9,7 @@ import dists.Distribution.Distribution as Distribution
 import math
 from numpy import random as r
 import scipy.optimize as op
+import scipy.special as sp
 
 class gompertz(Distribution):
     @staticmethod
@@ -17,14 +18,14 @@ class gompertz(Distribution):
             raise ValueError("eta and b must be positive")
         if(x<0):
             raise ValueError("x must be non-negative")
-        return b*eta*math.exp(b*x)*math.exp(eta)*math.exp(-eta*math.exp(b*x))
+        return b*eta*math.exp(b*x+eta*(1-math.exp(b*x)))
     @staticmethod
     def cdf(eta,b,x):
         if(eta<=0 or b<=0):
             raise ValueError("eta and b must be positive")
         if(x<0):
             raise ValueError("x must be non-negative")
-        return 1-math.exp(-eta*(math.exp(b*x)-1))
+        return 1-math.exp(eta*(1-math.exp(b*x)))
     @staticmethod
     def random(eta,b):
         if(eta<=0 or b<=0):
@@ -35,6 +36,14 @@ class gompertz(Distribution):
         if(eta<=0 or b<=0):
             raise ValueError("eta and b must be positive")
         return (1/b)*math.log(math.log(1/2)/eta+1)
+    @staticmethod
+    def mean(eta,b):
+        return math.exp(eta)*sp.gammainc(0,eta)/b
+    @staticmethod
+    def mode(eta,b):
+        if(eta<1):
+            return math.log(1/eta)
+        return 0
     @staticmethod
     def ppf(eta,b,q):
         if(eta<=0 or b<=0):

@@ -14,8 +14,10 @@ class hotellingtsquare(Distribution):
     def pdf(m,p,x):
         return math.pow(x/m,p/2)*math.pow(m/(m+x),(1+m)/2)/(x*sp.beta(p/2,(m-p+1)/2))
     @staticmethod
-    def cdf():
-        pass
+    def cdf(m,p,x):
+        if(x>0):
+            return sp.betainc(p/2,1/2*(m-p+1),(x*(m-p+1))/(m*(x*(m-p+1)/m+m-p+1)))
+        return 0
     @staticmethod
     def random():
         pass
@@ -41,14 +43,18 @@ class hotellingtsquare(Distribution):
             return math.sqrt(2*(m-1)*m**2*p/((m-p-3)*(p-m+1)**2))
         return None
     @staticmethod
-    def kurtosis():
-        pass
+    def kurtosis(m,p):
+        if(m-p>7):
+            return 3*(m-p-3)*(-(m-5)*p**2+(m+3)*(m-1)*p+4*(m-1)**2)/((m-1)*p*(m-p-7)*(m-p-5))
+        return None
     @staticmethod
     def entropy():
         pass
     @staticmethod
-    def skewness():
-        pass
+    def skewness(m,p):
+        if(m-p>5):
+            return 2*(m+p-1)*math.sqrt((-2*m+2*p+6)/(p-m*p))/(m-p-5)
+        return None
     @staticmethod
     def ppf():
         pass
