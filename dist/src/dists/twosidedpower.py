@@ -11,18 +11,34 @@ import math
 
 class twosidedpower(Distribution):
     @staticmethod
-    def random(d,theta):
-        n=ds.rg0()
-        if(n<=theta):
-            return theta*math.pow(n/theta,1/d)
-        return 1-(1-theta)*math.pow((1-n)/(1-d),1/d)
+    def pdf(a,b,m,n,x):
+        if(a<x and x<=m):
+            return n/(b-a)*math.pow((x-a)/(m-a),n-1)
+        if(m<=x and x<b):
+            return n/(b-a)*math.pow((b-x)/(b-m),n-1)
+        return 0
     @staticmethod
-    def median(d,theta):
-        if(1/2<=theta):
-            return theta*math.pow(1/(2*theta),1/d)
-        return 1-(1-theta)*math.pow(1/(2*(1-d)),1/d)
+    def cdf(a,b,m,n,x):
+        if(x<a):
+            return 0
+        if(a<=x and x<=m):
+            return (m-a)/(b-a)*math.pow((x-a)/(m-a),n)
+        if(m<=x and x<=b):
+            return 1-(b-m)/(b-a)*math.pow((b-x)/(b-m),n)
+        if(b<x):
+            return 1
     @staticmethod
-    def ppf(d,theta,q):
-        if(q<=theta):
-            return theta*math.pow(q/theta,1/d)
-        return 1-(1-theta)*math.pow((1-q)/(1-d),1/d)
+    def mean(a,b,m,n):
+        return (a+(n-1)*m+b)/(n+1)
+    @staticmethod
+    def mode(a,b,m,n):
+        if(n>1):
+            return n/(b-a)
+        if(0<=n and n<1 and a<m and m<b):
+            return (a,b)
+    @staticmethod
+    def variance(a,b,m,n):
+        return (b-a)**2*(n-2*(n-1)*(m-a)/(b-a)*(b-m)/(b-a))/((n+2)*(n+1)**2)
+    @staticmethod
+    def stddev(a,b,m,n):
+        return (b-a)*math.sqrt((n-2*(n-1)*(m-a)/(b-a)*(b-m)/(b-a))/((n+2)))/(n+1)
