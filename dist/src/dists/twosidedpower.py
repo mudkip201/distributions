@@ -6,7 +6,6 @@ Created on Jul 16, 2017
 
 
 import dists.Distribution.Distribution as Distribution
-import dists.Distribution as ds
 import math
 
 class twosidedpower(Distribution):

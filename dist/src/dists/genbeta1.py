@@ -1,21 +1,27 @@
 '''
-Created on Jul 19, 2017
+Created on Jul 25, 2017
 
 @author: matthewcowen-green
 '''
 
 
 import dists.Distribution.Distribution as Distribution
+import dists.Distribution as ds
 import math
+import numpy as np
+from numpy import random as r
+import scipy.stats as st
 import scipy.special as sp
+import scipy.optimize as op
 
-class genbeta2(Distribution):
+class genbeta1(Distribution):
     @staticmethod
     def pdf(a,b,p,q,x):
-        return a*math.pow(x,a*p-1)/(math.pow(b,a*p)*sp.beta(p,q)*math.pow(1+math.pow(x/b,a),p+q))
+        return a*math.pow(x,a*p-1)*math.pow(1-math.pow(x/b,a),q-1)/(math.pow(b,a*p)*sp.beta(p,q))
     @staticmethod
     def cdf(a,b,p,q,x):
-        return math.pow(math.pow(x/b,a)/(1+math.pow(x/b,a)),p)/(p*sp.beta(p,q))*sp.hyp2f1(p,1-q,math.pow(x/b,a))
+        return math.pow(x/b,a*p)/(p*sp.beta(p,q))*sp.hyp2f1(p,1-q,math.pow(x/b,a),p+1)
+        pass
     @staticmethod
     def random():
         pass

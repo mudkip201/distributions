@@ -1,5 +1,5 @@
 '''
-Created on Jul 19, 2017
+Created on Jul 25, 2017
 
 @author: matthewcowen-green
 '''
@@ -9,13 +9,13 @@ import dists.Distribution.Distribution as Distribution
 import math
 import scipy.special as sp
 
-class genbeta2(Distribution):
+class ricefading(Distribution):
     @staticmethod
-    def pdf(a,b,p,q,x):
-        return a*math.pow(x,a*p-1)/(math.pow(b,a*p)*sp.beta(p,q)*math.pow(1+math.pow(x/b,a),p+q))
+    def pdf(m,A,s2):
+        return m/s2*math.exp(-(m**2+A**2)/(2*s2))*sp.i0(m*A/s2)
     @staticmethod
-    def cdf(a,b,p,q,x):
-        return math.pow(math.pow(x/b,a)/(1+math.pow(x/b,a)),p)/(p*sp.beta(p,q))*sp.hyp2f1(p,1-q,math.pow(x/b,a))
+    def cdf():
+        pass
     @staticmethod
     def random():
         pass
