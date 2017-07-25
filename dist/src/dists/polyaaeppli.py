@@ -37,14 +37,14 @@ class polyaaeppli(Distribution):
     def stddev(t,p):
         return math.sqrt((1+p)*t)/(1-p)
     @staticmethod
-    def kurtosis():
-        pass
+    def kurtosis(t,p):
+        return (p**2+10*p+1)/(t*(p+1))+3
     @staticmethod
     def entropy():
         pass
     @staticmethod
-    def skewness():
-        pass
+    def skewness(t,p):
+        return (p**2+4*p+1)/((p+1)*math.sqrt(t*(p+1)))
     @staticmethod
     def ppf():
         pass
