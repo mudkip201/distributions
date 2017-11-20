@@ -6,7 +6,7 @@ Created on Jul 15, 2017
 
 import math
 from numpy import random as r
-
+import math.pi as pi
 
 
 class Distribution:
@@ -143,3 +143,13 @@ class lrtrunc(Distribution):
     @staticmethod
     def mean(dist,minval,maxval,*args,**kwargs):
         return dist.ppf((dist.cdf(x=maxval,*args,**kwargs)-dist.cdf(x=minval,*args,**kwargs))/2)
+    
+class cosinesine(Distribution):
+    @staticmethod
+    def pdf(dist, aa, bb, gg, tt, *args, **kwargs):
+        h=(pi*(aa+gg)*(bb+aa*math.cos(pi/2*dist.cdf(*args, **kwargs))+tt*(math.sin(pi/2*dist.cdf(*args, **kwargs)))**3))*dist.pdf(*args, **kwargs)
+        h/=2*(aa+bb(math.cos(pi/2*dist.cdf(*args, **kwargs)))+gg*math.sin(pi/2*dist.cdf(*args, **kwargs))+tt*math.cos(pi/2*dist.cdf(*args, **kwargs))*math.sin(pi/2*dist.cdf(*args, **kwargs)))**2
+        return h
+    @staticmethod
+    def cdf(dist, aa, bb, gg, tt, *args, **kwargs):
+        return (aa+gg)*math.sin(pi/2*dist.cdf(*args, **kwargs))/(aa+bb*math.cos(pi/2*dist.cdf(*args, **kwargs))+gg*math.sin(pi/2*dist.cdf(*args, **kwargs))+tt*math.cos(pi/2*dist.cdf(*args, **kwargs))*math.sin(pi/2*dist.cdf(*args, **kwargs)))
